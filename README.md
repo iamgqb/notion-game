@@ -38,11 +38,6 @@
     cd notion-game
     ```
 
-2.  **安装依赖:**
-    ```bash
-    npm install
-    ```
-
 3.  **创建 Notion 集成:**
     *   转到 Notion 中的 [我的集成](https://www.notion.so/my-integrations) 并创建一个新的集成。
     *   给它一个名称（例如，“Steam Sync”）并复制 **内部集成令牌 (Internal Integration Token)**。这将是您的 `NOTION_API_KEY`。
