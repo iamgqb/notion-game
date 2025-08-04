@@ -1,0 +1,30 @@
+name: Sync Steam Games to Notion
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 14 * * *' # Runs every day at 10 PM Beijing Time (14:00 UTC)
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Specify a Node.js version
+
+      - name: Run sync script
+        env:
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          STEAM_KEY: ${{ secrets.STEAM_KEY }}
+          STEAM_ID: ${{ secrets.STEAM_ID }}
+        run: node src/index.js
