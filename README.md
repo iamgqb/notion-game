@@ -9,6 +9,7 @@
 - **更新游戏统计:** 使用最新的游戏时间和成就完成率更新现有的游戏页面。
 - **高效同步:** 仅更新已更改的游戏，最大限度地减少 API 调用。
 - **弹性设计:** 优雅地处理 API 错误而不会崩溃。
+- **历史记录追踪:** 在一个单独的数据库中记录每天的游戏时间增量。
 
 ## 工作原理
 
@@ -20,6 +21,8 @@
     *   如果您 Steam 库中的游戏在 Notion 中不存在，它将创建一个包含游戏详细信息的新页面。
     *   如果游戏已存在，它会检查游戏时间的变化。如果游戏时间已更改，它将更新游戏时间并刷新成就完成率。
     *   Notion 中的游戏封面图像将设置为 Steam 商店中该游戏的标题图片。
+4.  **记录历史:**
+    *   当检测到游戏时间增加时，会在历史数据库中创建一个新条目，记录游戏、增量时间和日期。
 
 ## 先决条件
 
@@ -47,7 +50,8 @@
     *   在浏览器中打开您的 Notion 数据库。
     *   URL 看起来像这样: `https://www.notion.so/your-workspace/DATABASE_ID?v=...`
     *   从 URL 中复制 `DATABASE_ID`。
-    *   本项目并没有生成数据库的方法，可以在 [这里](https://www.notion.so/yuecheng/245e106bbeb18007b8ddca60e5540373?v=245e106bbeb18126b268000cc1e83359&source=copy_link) 复制一份模版
+    *   本项目并没有生成数据库的方法，可以在 [这里](https://www.notion.so/yuecheng/245e106bbeb18007b8ddca60e5540373?v=245e106bbeb18126b268000cc1e83359&source=copy_link) 复制一份游戏库模版。
+    *   历史数据库模版可以在 [这里](https://www.notion.so/278e106bbeb18004ad12d470de8a1c0d?v=278e106bbeb1811e9ca3000cc94c2341&source=copy_link) 复制。
 
 5.  **找到您的 Steam ID:**
     *   访问 [Steam账户页](https://store.steampowered.com/account/) 复制您的 `steamID64`。
@@ -61,6 +65,7 @@
         ```
         NOTION_API_KEY="your_notion_api_key"
         NOTION_DATABASE_ID="your_notion_database_id"
+        HISTORY_DATABASE_ID="your_history_database_id"
         STEAM_KEY="your_steam_api_key"
         STEAM_ID="your_steam_id_64"
         ```
@@ -79,12 +84,23 @@ node src/index.js
 
 为使脚本正常工作，您的 Notion 数据库应具有以下属性：
 
+### 游戏库数据库
+
 | 属性名称 | 类型 | 描述 |
 | --- | --- | --- |
 | `name` | `Title` | 游戏名称。 |
 | `appid` | `Number` | 游戏的 Steam App ID。 |
 | `play_time` | `Number` | 总游戏时间（分钟）。 |
 | `achievement` | `Number` | 成就完成率（0 到 1）。 |
+
+### 历史数据库
+
+| 属性名称 | 类型 | 描述 |
+| --- | --- | --- |
+| `name` | `Title` | 游戏名称。 |
+| `appid` | `Number` | 游戏的 Steam App ID。 |
+| `time` | `Number` | 游戏时间增量（分钟）。 |
+| `date` | `Date` | 记录日期。 |
 
 ## 贡献
 

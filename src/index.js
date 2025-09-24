@@ -25,15 +25,22 @@ if (fs.existsSync(envPath)) {
             const value = valueParts.join('=').trim();
             if (key) {
                 // Set the environment variable, removing quotes from the value if present.
-                process.env[key.trim()] = value.replace(/^['|"](.*)['|"]$/, '$1');
+                process.env[key.trim()] = value.replace(
+                    /^['|"](.*)['|"]$/,
+                    '$1'
+                );
             }
         }
     }
 }
 
-const notion = require("./notion");
-const { getOwnedGames, getGameAchievements, getSteamBuyData } = require("./steam");
-const config = require("./config");
+const notion = require('./notion');
+const {
+    getOwnedGames,
+    getGameAchievements,
+    getSteamBuyData,
+} = require('./steam');
+const config = require('./config');
 
 /**
  * Fetches all pages from a Notion database, automatically handling pagination.
@@ -65,7 +72,7 @@ async function getAllDatabasePages() {
  * When playtime is updated, it also refreshes the achievement completion rate.
  */
 async function syncSteamGamesToNotion() {
-    console.log("Starting Steam to Notion synchronization...");
+    console.log('Starting Steam to Notion synchronization...');
 
     // 1. Fetch data from both Steam and Notion concurrently for efficiency.
     const [steamGames, notionPages] = await Promise.all([
@@ -73,7 +80,9 @@ async function syncSteamGamesToNotion() {
         getAllDatabasePages(),
     ]);
     console.log(
-        `Found ${Object.keys(steamGames).length} games on Steam and ${notionPages.length} pages in Notion.`
+        `Found ${Object.keys(steamGames).length} games on Steam and ${
+            notionPages.length
+        } pages in Notion.`
     );
 
     // 2. Create a map of Notion pages by appid for efficient lookups.
@@ -98,11 +107,14 @@ async function syncSteamGamesToNotion() {
             }
         } catch (error) {
             // Log errors for individual games without stopping the entire sync process.
-            console.error(`Failed to sync page for ${game.name} (appid: ${appid})`, error);
+            console.error(
+                `Failed to sync page for ${game.name} (appid: ${appid})`,
+                error
+            );
         }
     }
 
-    console.log("Synchronization complete.");
+    console.log('Synchronization complete.');
 }
 
 /**
@@ -121,12 +133,22 @@ async function updateExistingGamePage(game, page) {
     }
 
     // Check if playtime has changed, and if so, update achievements too.
+    let updateTime = 0;
     if (existingProperties?.play_time?.number !== game.playtime_forever) {
         propertiesToUpdate.play_time = { number: game.playtime_forever };
+        updateTime =
+            game.playtime_forever - existingProperties.play_time.number;
 
-        const { completionRate } = await getGameAchievements(config.steamKey, config.steamId, game.appid);
+        const { completionRate } = await getGameAchievements(
+            config.steamKey,
+            config.steamId,
+            game.appid
+        );
         // Only update achievements if the rate is valid (not -1) and has changed.
-        if (completionRate !== -1 && existingProperties?.achievement?.number !== completionRate) {
+        if (
+            completionRate !== -1 &&
+            existingProperties?.achievement?.number !== completionRate
+        ) {
             propertiesToUpdate.achievement = { number: completionRate };
         }
     }
@@ -134,7 +156,18 @@ async function updateExistingGamePage(game, page) {
     // If there are properties to update, call the Notion API.
     if (Object.keys(propertiesToUpdate).length > 0) {
         console.log(`Updating ${game.name}...`);
-        await notion.updatePage(config.notionApiKey, page.id, { properties: propertiesToUpdate });
+        await notion.updatePage(config.notionApiKey, page.id, {
+            properties: propertiesToUpdate,
+        });
+    }
+
+    // If the playtime has increased, create a new record in the history database.
+    if (updateTime > 0) {
+        await createRecordPage({
+            name: game.name,
+            appid: game.appid,
+            time: updateTime,
+        });
     }
 }
 
@@ -145,7 +178,11 @@ async function updateExistingGamePage(game, page) {
  */
 async function createNewGamePage(game) {
     console.log(`Adding new game to Notion: ${game.name}`);
-    const { completionRate } = await getGameAchievements(config.steamKey, config.steamId, game.appid);
+    const { completionRate } = await getGameAchievements(
+        config.steamKey,
+        config.steamId,
+        game.appid
+    );
 
     const properties = {
         appid: { number: game.appid },
@@ -168,6 +205,48 @@ async function createNewGamePage(game) {
     };
 
     await notion.createPage(config.notionApiKey, config.databaseId, pageData);
+
+    // Create a new record in the history database for the new game.
+    if (game.playtime_forever > 0) {
+        await createRecordPage({
+            name: game.name,
+            appid: game.appid,
+            time: game.playtime_forever,
+        });
+    }
+}
+
+/**
+ * Creates a new record page in the history database.
+ * @param {object} game - The game object containing the name, appid, and time.
+ */
+async function createRecordPage(game) {
+    console.log(`Adding new record to Notion: ${game.name}`);
+
+    const now = new Date();
+    // The time zone of the date is UTC+8, so add one day to the UTC date.
+    const recordDate = Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + 1
+    );
+
+    const properties = {
+        appid: { number: game.appid },
+        name: { title: [{ text: { content: game.name } }] },
+        time: { number: game.time },
+        date: { date: { start: new Date(recordDate).toISOString() } },
+    };
+
+    const pageData = {
+        properties,
+    };
+
+    await notion.createPage(
+        config.notionApiKey,
+        config.historyDatabaseId,
+        pageData
+    );
 }
 
 /**
@@ -175,11 +254,14 @@ async function createNewGamePage(game) {
  * If any are missing, it logs an error and exits the process.
  */
 function validateConfig() {
-    const requiredKeys = ['notionApiKey', 'databaseId', 'steamKey', 'steamId'];
-    const missingKeys = requiredKeys.filter(key => !config[key]);
+    const requiredKeys = ['notionApiKey', 'databaseId', 'steamKey', 'steamId', 'historyDatabaseId'];
+    const missingKeys = requiredKeys.filter((key) => !config[key]);
 
     if (missingKeys.length > 0) {
-        console.error("Missing required configuration. Please set the following environment variables:", missingKeys.join(', '));
+        console.error(
+            'Missing required configuration. Please set the following environment variables:',
+            missingKeys.join(', ')
+        );
         process.exit(1);
     }
 }
@@ -191,7 +273,10 @@ function validateConfig() {
 function main() {
     validateConfig();
     syncSteamGamesToNotion().catch((error) => {
-        console.error("An unexpected error occurred during the synchronization process:", error);
+        console.error(
+            'An unexpected error occurred during the synchronization process:',
+            error
+        );
         process.exit(1);
     });
 }

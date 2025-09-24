@@ -22,6 +22,13 @@ module.exports = {
     databaseId: process.env.NOTION_DATABASE_ID,
 
     /**
+     * The ID of the Notion database to sync with.
+     * Loaded from the HISTORY_DATABASE_ID environment variable.
+     * @type {string}
+     */
+    historyDatabaseId: process.env.HISTORY_DATABASE_ID,
+
+    /**
      * The Steam API key for accessing Steam services.
      * Loaded from the STEAM_KEY environment variable.
      * @type {string}
