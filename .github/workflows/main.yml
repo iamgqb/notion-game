@@ -25,6 +25,7 @@ jobs:
         env:
           NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          HISTORY_DATABASE_ID: ${{ secrets.HISTORY_DATABASE_ID }}
           STEAM_KEY: ${{ secrets.STEAM_KEY }}
           STEAM_ID: ${{ secrets.STEAM_ID }}
         run: node src/index.js
