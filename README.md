@@ -28,7 +28,7 @@
 
 在开始之前，请确保您拥有以下内容：
 
--   [Node.js](https://nodejs.org/) (建议使用 v16 或更高版本)
+-   [Node.js](https://nodejs.org/) v20 或更高版本
 -   一个 [Notion 帐户](https://www.notion.so/)
 -   一个 [Steam 帐户](https://store.steampowered.com/) (个人资料需公开)
 -   一个 [Steam API 密钥](https://steamcommunity.com/dev/apikey)
@@ -92,6 +92,9 @@ node src/index.js
 | `appid` | `Number` | 游戏的 Steam App ID。 |
 | `play_time` | `Number` | 总游戏时间（分钟）。 |
 | `achievement` | `Number` | 成就完成率（0 到 1）。 |
+| `buy_time` | `Date` | 游戏购买日期。 |
+| `status` | `Multi-select` | 游戏状态标签。 |
+| `favorite` | `Checkbox` | 是否收藏；实际字段名使用美式拼写 `favorite`。 |
 
 ### 历史数据库
 
@@ -102,9 +105,90 @@ node src/index.js
 | `time` | `Number` | 游戏时间增量（分钟）。 |
 | `date` | `Date` | 记录日期。 |
 
-## 贡献
+## Cloudflare R2 备份
 
-欢迎贡献！如果您有任何建议或发现任何错误，请随时提交拉取请求或开启一个 issue。
+每日同步结束后，GitHub Actions 会读取游戏库和历史库，并将规范化后的业务数据与 R2 中的最新有效快照比较。只有数据发生变化，或最新快照缺失、损坏时，才会创建完整快照。同步任务即使失败，备份任务仍会运行。
+
+当前备份目标：
+
+- Endpoint：`https://23cbd4dde1f2b9ba631161785549d4b3.r2.cloudflarestorage.com`
+- Bucket：`game-record`
+- Region：`auto`
+
+游戏库备份 `name`、`appid`、`play_time`、`achievement`、`buy_time`、`status`、`favorite`；历史库备份 `name`、`appid`、`time`、`date`。Formula、页面正文、附件和封面不在备份范围内。
+
+有效快照位于：
+
+```text
+snapshots/YYYY/MM/DD/<UTC时间戳>-<内容哈希前12位>/
+├── games.json.gz
+├── history.json.gz
+├── games.csv
+├── history.csv
+└── manifest.json
+```
+
+`manifest.json` 最后写入；没有清单的目录不视为有效快照。每周审计会识别这类未完成前缀，在 Bucket Lock 的 90 天保护期内报告为延期清理，并在 91 天安全宽限期后删除。`state/latest.json` 指向最新快照。最近 90 天内保留所有变更快照，90 天至 12 个月之间每月保留最后一份，最新有效快照始终保留。
+
+备份前会校验两个 Notion 数据库的必需字段名称、类型和值结构。字段被重命名、删除或从 Date/Multi-select/Checkbox 等类型改成其他类型时，任务会直接失败，不会把 schema 漂移静默转换为空值并写入 R2。
+
+### GitHub 配置
+
+在仓库的 `Settings → Secrets and variables → Actions` 中配置：
+
+| 类型 | 名称 | 值或权限 |
+| --- | --- | --- |
+| Variable | `R2_ACCOUNT_ID` | `23cbd4dde1f2b9ba631161785549d4b3` |
+| Variable | `R2_BUCKET` | `game-record` |
+| Secret | `R2_ACCESS_KEY_ID` | R2 S3 Access Key ID |
+| Secret | `R2_SECRET_ACCESS_KEY` | R2 S3 Secret Access Key |
+
+R2 凭证应选择 `Object Read & Write`，并限制到 `game-record` Bucket。不要把凭证提交到仓库。现有 Notion Secrets 会由备份任务复用。
+
+本地执行：
+
+```bash
+npm ci
+npm run backup
+npm run backup:audit
+```
+
+### Bucket 保护规则
+
+保留现有的 `Default Multipart Abort Rule`。在 Cloudflare Dashboard 的 `R2 → game-record → Settings` 中另外配置：
+
+1. Object Lifecycle Rule：名称 `Delete stale staging`，前缀 `staging/`，7 天后删除。
+2. Bucket Lock Rule：名称 `Protect snapshots 90 days`，前缀 `snapshots/`，保留 90 天。
+3. 不为 `snapshots/` 配置自动过期规则；历史清理由每周审计任务完成，从而保证最新快照不会因长期无变化而过期。
+
+也可以使用已登录且具备 Bucket 管理权限的 Wrangler：
+
+```bash
+npx wrangler r2 bucket lifecycle add game-record "Delete stale staging" "staging/" --expire-days 7
+npx wrangler r2 bucket lock add game-record "Protect snapshots 90 days" "snapshots/" --retention-days 90
+npx wrangler r2 bucket lifecycle list game-record
+npx wrangler r2 bucket lock list game-record
+```
+
+GitHub Actions 使用的对象级凭证不应拥有修改这些规则的权限。
+
+### 人工恢复
+
+1. 从事故发生前最近的快照下载 `manifest.json` 和其中列出的四个文件，逐项核对文件大小与 SHA-256。
+2. 从本项目提供的游戏库和历史库模板分别复制一个新数据库，不要直接覆盖受损数据库。
+3. 将 `games.csv` 和 `history.csv` 导入新数据库；确认 `buy_time` 为 Date、`status` 为 Multi-select、`favorite` 为 Checkbox，其余字段类型与上文一致。
+4. CSV 中的 `buy_time_end`、`buy_time_time_zone`、`date_end`、`date_time_zone` 用于保留日期范围信息。若实际数据不使用日期范围，可在导入前删除这些空列；否则根据 JSON 快照人工核对范围和时区。
+5. 将新数据库共享给 Notion 集成，更新 `NOTION_DATABASE_ID` 和 `HISTORY_DATABASE_ID`。
+6. 手动触发一次同步，核对两个数据库的记录数与 `manifest.json` 一致。
+
+建议每季度使用临时 Notion 数据库执行一次完整恢复演练。
+
+### 备份结果
+
+- `CREATED_SNAPSHOT`：业务数据变化，已创建并校验新快照。
+- `SKIPPED_NO_CHANGE`：业务数据未变化，且最新快照校验通过；R2 不产生写操作。
+- `CREATED_REPAIR_SNAPSHOT`：业务数据未变化，但最新快照损坏或缺失，已重建。
+- 每周日运行审计，校验最新快照并执行保留清理；失败会使 GitHub Actions 任务失败并触发通知。
 
 ---
-*该 README 由 Gemini 生成。*
+*该 README 由 Gemini / Codex 生成。*

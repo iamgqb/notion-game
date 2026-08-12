@@ -1,9 +1,17 @@
 name: Sync Steam Games to Notion
 
+permissions:
+  contents: read
+
+concurrency:
+  group: notion-game-r2
+  cancel-in-progress: false
+
 on:
   push:
     branches:
       - main
+      - master
   schedule:
     - cron: '0 19 * * *' # Runs every day at 3 AM Beijing Time (19:00 UTC)
   workflow_dispatch: # Allows manual triggering
@@ -14,12 +22,19 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18' # Specify a Node.js version
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
 
       - name: Run sync script
         env:
@@ -28,4 +43,35 @@ jobs:
           HISTORY_DATABASE_ID: ${{ secrets.HISTORY_DATABASE_ID }}
           STEAM_KEY: ${{ secrets.STEAM_KEY }}
           STEAM_ID: ${{ secrets.STEAM_ID }}
-        run: node src/index.js
+        run: npm run sync
+
+  backup:
+    name: Back up Notion to R2
+    needs: sync
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Back up Notion databases
+        env:
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          HISTORY_DATABASE_ID: ${{ secrets.HISTORY_DATABASE_ID }}
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          BACKUP_TIME_ZONE: Asia/Singapore
+        run: npm run backup

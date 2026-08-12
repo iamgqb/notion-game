@@ -11,28 +11,7 @@
 
 // Manually load environment variables from the .env file for local development.
 // This avoids using external libraries like 'dotenv'.
-const fs = require('fs');
-const path = require('path');
-
-const envPath = path.resolve(__dirname, '../.env');
-if (fs.existsSync(envPath)) {
-    const envFileContent = fs.readFileSync(envPath, 'utf-8');
-    for (const line of envFileContent.split('\n')) {
-        const trimmedLine = line.trim();
-        // Ignore comments and empty lines.
-        if (trimmedLine && !trimmedLine.startsWith('#')) {
-            const [key, ...valueParts] = trimmedLine.split('=');
-            const value = valueParts.join('=').trim();
-            if (key) {
-                // Set the environment variable, removing quotes from the value if present.
-                process.env[key.trim()] = value.replace(
-                    /^['|"](.*)['|"]$/,
-                    '$1'
-                );
-            }
-        }
-    }
-}
+require('./load-env').loadEnv();
 
 const notion = require('./notion');
 const {
