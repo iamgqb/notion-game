@@ -28,7 +28,7 @@
 
 在开始之前，请确保您拥有以下内容：
 
--   [Node.js](https://nodejs.org/) v20 或更高版本
+-   [Node.js](https://nodejs.org/) v24 或更高版本
 -   一个 [Notion 帐户](https://www.notion.so/)
 -   一个 [Steam 帐户](https://store.steampowered.com/) (个人资料需公开)
 -   一个 [Steam API 密钥](https://steamcommunity.com/dev/apikey)
