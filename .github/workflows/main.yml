@@ -14,7 +14,13 @@ on:
       - master
   schedule:
     - cron: '0 19 * * *' # Runs every day at 3 AM Beijing Time (19:00 UTC)
-  workflow_dispatch: # Allows manual triggering
+  workflow_dispatch:
+    inputs:
+      force_site_deploy:
+        description: Force a Cloudflare Workers deployment even when the site hash is unchanged
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   sync:
@@ -75,3 +81,61 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           BACKUP_TIME_ZONE: Asia/Singapore
         run: npm run backup
+
+  site:
+    name: Deploy game archive to Cloudflare Workers
+    needs: backup
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build site and check for changes
+        id: site
+        env:
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          SITE_FORCE_DEPLOY: ${{ github.event.inputs.force_site_deploy || 'false' }}
+        run: npm run site:prepare
+
+      - name: Deploy changed site to Cloudflare Workers
+        if: ${{ steps.site.outputs.changed == 'true' }}
+        id: worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.R2_ACCOUNT_ID }}
+          command: deploy
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Record successful Workers deployment
+        if: ${{ steps.site.outputs.changed == 'true' }}
+        env:
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          SITE_DEPLOYMENT_HASH: ${{ steps.site.outputs.deployment_hash }}
+          SITE_SOURCE_PREFIX: ${{ steps.site.outputs.source_prefix }}
+          SITE_SOURCE_CONTENT_HASH: ${{ steps.site.outputs.source_content_hash }}
+          SITE_SOURCE_SNAPSHOT_COMPLETED_AT: ${{ steps.site.outputs.snapshot_completed_at }}
+        run: npm run site:mark-deployed

@@ -7,6 +7,10 @@
     "sync": "node src/index.js",
     "backup": "node src/backup.js",
     "backup:audit": "node src/backup-audit.js",
+    "site:data": "node src/site/export-data.js",
+    "site:prepare": "node src/site/prepare-deploy.js",
+    "site:mark-deployed": "node src/site/mark-deployed.js",
+    "site:serve": "node src/site/serve.js",
     "test": "node --test test/*.test.js"
   },
   "engines": {

@@ -1,6 +1,6 @@
 # Notion-Game 同步
 
-这是一个 Node.js 脚本，可将您的 Steam 游戏库同步到 Notion 数据库。它会自动从 Steam API 获取您拥有的游戏、游戏时间和成就完成率，并保持您的 Notion 数据库更新。
+这是一个 Node.js 项目，可将 Steam 游戏库同步到 Notion、将业务数据备份到 Cloudflare R2，并把游戏陈列室按需部署到 Cloudflare Workers Static Assets。它会自动从 Steam API 获取游戏、游戏时间和成就完成率，并保持 Notion 数据库和公开展示页面更新。
 
 ## 功能
 
@@ -10,6 +10,8 @@
 - **高效同步:** 仅更新已更改的游戏，最大限度地减少 API 调用。
 - **弹性设计:** 优雅地处理 API 错误而不会崩溃。
 - **历史记录追踪:** 在一个单独的数据库中记录每天的游戏时间增量。
+- **游戏陈列室:** 提供近期游玩、喜欢、全成就、近一个月时间线和完整游戏库页面。
+- **按变化部署:** 只有业务数据、站点文件或 Workers 配置实际变化时才创建新的部署。
 
 ## 工作原理
 
@@ -189,6 +191,48 @@ GitHub Actions 使用的对象级凭证不应拥有修改这些规则的权限�
 - `SKIPPED_NO_CHANGE`：业务数据未变化，且最新快照校验通过；R2 不产生写操作。
 - `CREATED_REPAIR_SNAPSHOT`：业务数据未变化，但最新快照损坏或缺失，已重建。
 - 每周日运行审计，校验最新快照并执行保留清理；失败会使 GitHub Actions 任务失败并触发通知。
+
+## Cloudflare Workers 游戏陈列室
+
+静态站点源文件位于 `site/`。本地查看真实只读数据：
+
+```bash
+npm run site:data
+npm run site:serve
+```
+
+打开 `http://127.0.0.1:4173`。生成的 `site/data.js` 已加入 `.gitignore`，不会把本地快照提交到仓库。
+
+### 自动部署流程
+
+主工作流中的 Workers 任务会在备份任务结束后执行：
+
+1. 从 R2 的 `state/latest.json` 读取最新有效备份，并校验清单、文件哈希和业务内容哈希。
+2. 使用备份中的 `games.json.gz` 与 `history.json.gz` 生成 `site/data.js`，部署过程不会再次请求 Notion。
+3. 对最终 `site/` 目录以及 `wrangler.jsonc` 的文件名和文件内容计算 SHA-256。
+4. 与 R2 的 `state/workers.json` 比较；哈希一致时返回 `SKIPPED_NO_CHANGE`，不调用 Cloudflare Workers。
+5. 只有哈希变化时才执行 `wrangler deploy`；部署成功后才更新 `state/workers.json`。
+
+页面代码、样式、Workers 配置或业务数据任一变化都会触发部署。仅同步时间变化、但业务数据和页面文件不变时不会部署。手动运行 GitHub Actions 时可以勾选 `force_site_deploy` 强制重新部署，用于 Worker 重建或状态恢复。
+
+### 首次配置 Cloudflare Workers
+
+项目使用 **Workers Static Assets**，由仓库根目录的 `wrangler.jsonc` 声明 Worker 名称 `notion-games` 和静态资源目录 `site/`。不需要先在 Cloudflare Dashboard 创建 Pages 项目或 Worker；首次成功执行 `wrangler deploy` 会自动创建应用，后续运行会更新同名 Worker。
+
+1. 在 Cloudflare 的 `API Tokens → Create Token → Custom Token` 创建或更新令牌，权限设置为 `Account → Workers Scripts → Edit`，并限制到当前 Cloudflare 账户。现有 Account API Token 可以同时保留 R2 权限与这项权限。
+2. 在 GitHub 仓库 `Settings → Secrets and variables → Actions` 中新增：
+
+| 类型 | 名称 | 值 |
+| --- | --- | --- |
+| Secret | `CLOUDFLARE_API_TOKEN` | 具有 Workers Scripts Edit 权限的 Account API Token |
+
+工作流会复用已有的 `R2_ACCOUNT_ID` 作为 Cloudflare Account ID，并复用 R2 凭证读取备份和记录部署状态。本地 `.env` 不会上传到 GitHub，因此仍需单独保存上述 GitHub Secret。
+
+配置完成后，在 GitHub Actions 手动运行 `Sync Steam Games to Notion`。首次运行应显示 `DEPLOY_REQUIRED`，并创建 `notion-games` Worker 及其 `workers.dev` 地址；再次运行且数据未变化时应显示 `SKIPPED_NO_CHANGE`。
+
+部署成功后如需绑定自定义域名，可在 Cloudflare Dashboard 进入该 Worker 的 `Settings → Domains & Routes`。如果希望通过 API 管理路由，还需要给令牌增加对应 Zone 的 `Workers Routes → Edit` 权限；这不影响默认 `workers.dev` 地址的部署。
+
+Cloudflare 官方参考：[从 Pages 迁移到 Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/)、[GitHub Actions 部署](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/)、[静态资源计费与限制](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/)。
 
 ---
 *该 README 由 Gemini / Codex 生成。*

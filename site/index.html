@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Steam 游戏陈列室、游玩历史与全成就收藏。">
+  <title>游迹 · 我的 Steam 陈列室</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&amp;family=Noto+Serif+SC:wght@500;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./data.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <!-- @author yuecheng -->
+  <header class="app-header">
+    <button class="brand" type="button" data-view-target="showcase" aria-label="返回陈列室">
+      <span class="brand-mark" aria-hidden="true">游</span>
+      <span>游迹</span>
+    </button>
+    <nav class="primary-nav" aria-label="主导航">
+      <button type="button" data-view-target="showcase" aria-current="page">陈列室</button>
+      <button type="button" data-view-target="timeline">时间线</button>
+      <button type="button" data-view-target="library">全部游戏</button>
+    </nav>
+    <div class="header-tools">
+      <span class="sync-state" id="sync-state">正在读取数据</span>
+      <button class="icon-button" id="theme-toggle" type="button" aria-label="切换颜色主题">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="view is-active" data-view-panel="showcase" aria-labelledby="showcase-title">
+      <header class="editorial-hero">
+        <div>
+          <p class="eyebrow" id="archive-period">MY STEAM ARCHIVE</p>
+          <h1 id="showcase-title">我的游戏<br><em>陈列室</em></h1>
+        </div>
+        <div class="hero-summary">
+          <p>由最近投入的时间、愿意推荐的作品，以及真正走到终点的旅程组成。</p>
+          <div class="hero-numbers">
+            <span><b id="total-games">—</b>款游戏</span>
+            <span><b id="total-hours">—</b>小时</span>
+          </div>
+        </div>
+      </header>
+
+      <nav class="collection-index" aria-label="陈列室分区">
+        <button type="button" data-scroll-target="recent-section"><i>01</i><strong>近期游玩</strong><span id="recent-count">—</span><b>↘</b></button>
+        <button type="button" data-scroll-target="liked-section"><i>02</i><strong>我的推荐</strong><span id="favorite-count">—</span><b>↘</b></button>
+        <button type="button" data-scroll-target="perfected-section"><i>03</i><strong>全成就</strong><span id="perfected-count">—</span><b>↘</b></button>
+      </nav>
+
+      <section class="collection-section" id="recent-section" aria-labelledby="recent-title">
+        <header class="section-heading">
+          <div><p>01 / RECENTLY PLAYED</p><h2 id="recent-title">近期游玩</h2></div>
+          <button class="text-action" type="button" data-view-target="timeline">查看完整时间线 <span>→</span></button>
+        </header>
+        <div class="recent-grid" id="recent-grid"></div>
+      </section>
+
+      <section class="collection-section" id="liked-section" aria-labelledby="liked-title">
+        <header class="section-heading">
+          <div><p>02 / FROM FAVORITE</p><h2 id="liked-title">我的推荐</h2></div>
+          <button class="text-action" type="button" data-library-filter="favorite">查看全部喜欢 <span>→</span></button>
+        </header>
+        <div class="poster-grid showcase-posters" id="favorite-grid"></div>
+      </section>
+
+      <section class="collection-section perfected-section" id="perfected-section" aria-labelledby="perfected-title">
+        <header class="section-heading">
+          <div><p>03 / PERFECT GAMES</p><h2 id="perfected-title">全成就陈列馆</h2></div>
+          <button class="text-action" type="button" data-library-filter="perfected">查看全部全成就 <span>→</span></button>
+        </header>
+        <div class="perfected-grid" id="perfected-grid"></div>
+      </section>
+    </section>
+
+    <section class="view" data-view-panel="timeline" aria-labelledby="timeline-title" hidden>
+      <header class="page-heading">
+        <p class="eyebrow">LAST 30 DAYS</p>
+        <h1 id="timeline-title">游玩时间线</h1>
+        <p>查看最近 30 天内同步到的游玩记录。</p>
+      </header>
+      <div class="toolbar timeline-toolbar">
+        <label class="search-field">
+          <span class="sr-only">搜索时间线中的游戏</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <input id="timeline-search" type="search" placeholder="搜索游戏">
+        </label>
+        <span class="result-count" id="timeline-count"></span>
+      </div>
+      <div class="timeline-list" id="timeline-list"></div>
+      <button class="load-more" id="timeline-more" type="button">加载更多记录</button>
+    </section>
+
+    <section class="view" data-view-panel="library" aria-labelledby="library-title" hidden>
+      <header class="page-heading library-heading">
+        <div><p class="eyebrow">FULL LIBRARY</p><h1 id="library-title">全部游戏</h1></div>
+        <p id="library-summary">—</p>
+      </header>
+      <div class="toolbar library-toolbar">
+        <label class="search-field">
+          <span class="sr-only">搜索全部游戏</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <input id="library-search" type="search" placeholder="搜索 330 款游戏">
+        </label>
+        <div class="filter-chips" role="group" aria-label="游戏筛选">
+          <button type="button" data-filter="all" aria-pressed="true">全部</button>
+          <button type="button" data-filter="favorite" aria-pressed="false">喜欢</button>
+          <button type="button" data-filter="perfected" aria-pressed="false">全成就</button>
+        </div>
+        <label class="select-field">排序
+          <select id="library-sort">
+            <option value="curated" selected>我的排序</option>
+            <option value="recent">最近游玩</option>
+            <option value="playtime">游玩时长</option>
+            <option value="achievement">成就进度</option>
+          </select>
+        </label>
+      </div>
+      <div class="library-result-line" aria-live="polite" id="library-result-line"></div>
+      <div class="poster-grid library-grid" id="library-grid"></div>
+      <button class="load-more" id="library-more" type="button">加载更多游戏</button>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>STEAM LIBRARY ARCHIVE</span>
+    <span id="footer-summary">只读数据快照</span>
+  </footer>
+
+  <dialog class="game-dialog" id="game-dialog">
+    <button class="dialog-close" id="dialog-close" type="button" aria-label="关闭详情">×</button>
+    <div class="dialog-poster poster-shell" id="dialog-poster"></div>
+    <div class="dialog-content">
+      <p class="eyebrow" id="dialog-kicker">GAME DETAIL</p>
+      <h2 id="dialog-title"></h2>
+      <div class="dialog-stats" id="dialog-stats"></div>
+      <div class="dialog-progress"><span id="dialog-progress-bar"></span></div>
+      <div class="dialog-tags" id="dialog-tags"></div>
+    </div>
+  </dialog>
+
+  <div class="data-error" id="data-error" role="alert" hidden>
+    未找到真实数据快照，请先运行 <code>npm run site:data</code>。
+  </div>
+</body>
+</html>

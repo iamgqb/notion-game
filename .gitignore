@@ -3,3 +3,7 @@
 
 # Ignore node_modules directory
 node_modules
+
+# Generated site data and local Cloudflare state
+site/data.js
+.wrangler
