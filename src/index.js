@@ -17,7 +17,6 @@ const notion = require('./notion');
 const {
     getOwnedGames,
     getGameAchievements,
-    getSteamBuyData,
 } = require('./steam');
 const config = require('./config');
 
@@ -53,6 +52,11 @@ async function getAllDatabasePages() {
 async function syncSteamGamesToNotion() {
     console.log('Starting Steam to Notion synchronization...');
 
+    // 每日扫描在 UTC+8 凌晨执行，新增游戏的购买日期记为扫描日期的前一天。
+    const purchaseDate = new Date(Date.now() + 8 * 60 * 60 * 1000);
+    purchaseDate.setUTCDate(purchaseDate.getUTCDate() - 1);
+    const buyTime = purchaseDate.toISOString().slice(0, 10);
+
     // 1. Fetch data from both Steam and Notion concurrently for efficiency.
     const [steamGames, notionPages] = await Promise.all([
         getOwnedGames(config.steamKey, config.steamId),
@@ -82,7 +86,7 @@ async function syncSteamGamesToNotion() {
             if (existingPage) {
                 await updateExistingGamePage(game, existingPage);
             } else {
-                await createNewGamePage(game);
+                await createNewGamePage(game, buyTime);
             }
         } catch (error) {
             // Log errors for individual games without stopping the entire sync process.
@@ -154,8 +158,9 @@ async function updateExistingGamePage(game, page) {
  * Creates a new game page in the Notion database.
  *
  * @param {object} game - The game object from the Steam API.
+ * @param {string} buyTime - UTC+8 扫描日期的前一天，格式为 YYYY-MM-DD。
  */
-async function createNewGamePage(game) {
+async function createNewGamePage(game, buyTime) {
     console.log(`Adding new game to Notion: ${game.name}`);
     const { completionRate } = await getGameAchievements(
         config.steamKey,
@@ -167,6 +172,7 @@ async function createNewGamePage(game) {
         appid: { number: game.appid },
         name: { title: [{ text: { content: game.name } }] },
         play_time: { number: game.playtime_forever },
+        buy_time: { date: { start: buyTime } },
     };
 
     // Only add the achievement property if the completion rate is valid.
@@ -260,4 +266,8 @@ function main() {
     });
 }
 
-main();
+if (require.main === module) {
+    main();
+}
+
+module.exports = { syncSteamGamesToNotion };
