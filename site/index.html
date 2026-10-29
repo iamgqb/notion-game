@@ -3,150 +3,117 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Steam 游戏陈列室、游玩历史与全成就收藏。">
-  <title>游迹 · 我的 Steam 陈列室</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&amp;family=Noto+Serif+SC:wght@500;600;700&amp;display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f7f6f2">
+  <meta name="description" content="存档点：一位游戏玩家的收藏、成就与冒险足迹。">
+  <title>存档点 CHECKPOINT — 我的游戏档案</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23c84930'/%3E%3Cpath d='M12 29V11h16l-4 6 4 6H14' stroke='white' stroke-width='2.5' fill='none'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./styles.css">
+  <script src="./assets/lucide.min.js" defer></script>
   <script src="./data.js" defer></script>
+  <script src="./showcase.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
-  <!-- @author yuecheng -->
-  <header class="app-header">
-    <button class="brand" type="button" data-view-target="showcase" aria-label="返回陈列室">
-      <span class="brand-mark" aria-hidden="true">游</span>
-      <span>游迹</span>
-    </button>
-    <nav class="primary-nav" aria-label="主导航">
-      <button type="button" data-view-target="showcase" aria-current="page">陈列室</button>
-      <button type="button" data-view-target="timeline">时间线</button>
-      <button type="button" data-view-target="library">全部游戏</button>
-    </nav>
-    <div class="header-tools">
-      <span class="sync-state" id="sync-state">正在读取数据</span>
-      <button class="icon-button" id="theme-toggle" type="button" aria-label="切换颜色主题">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
-      </button>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#archive" aria-label="存档点首页">
+        <span class="brand-symbol"><i data-lucide="flag" aria-hidden="true"></i></span>
+        <span class="brand-name">存档点<span>CHECKPOINT</span></span>
+      </a>
+      <nav class="main-nav" aria-label="主导航">
+        <a href="#archive" data-nav="archive" aria-current="page">玩家档案</a>
+        <a href="#collection" data-nav="collection">游戏收藏</a>
+        <a href="#achievements" data-nav="achievements">成就陈列柜</a>
+        <a href="#journey" data-nav="journey">冒险足迹</a>
+      </nav>
+      <div class="header-end"><span class="public-label"><span></span> 个人公开档案</span></div>
     </div>
   </header>
 
-  <main>
-    <section class="view is-active" data-view-panel="showcase" aria-labelledby="showcase-title">
-      <header class="editorial-hero">
-        <div>
-          <p class="eyebrow" id="archive-period">MY STEAM ARCHIVE</p>
-          <h1 id="showcase-title">我的游戏<br><em>陈列室</em></h1>
-        </div>
-        <div class="hero-summary">
-          <p>由最近投入的时间、愿意推荐的作品，以及真正走到终点的旅程组成。</p>
-          <div class="hero-numbers">
-            <span><b id="total-games">—</b>款游戏</span>
-            <span><b id="total-hours">—</b>小时</span>
-          </div>
-        </div>
-      </header>
+  <main id="main" tabindex="-1">
+    <div id="loading" class="loading-state"><span class="loader"></span><p>正在打开这份游戏档案…</p></div>
 
-      <nav class="collection-index" aria-label="陈列室分区">
-        <button type="button" data-scroll-target="recent-section"><i>01</i><strong>近期游玩</strong><span id="recent-count">—</span><b>↘</b></button>
-        <button type="button" data-scroll-target="liked-section"><i>02</i><strong>我的推荐</strong><span id="favorite-count">—</span><b>↘</b></button>
-        <button type="button" data-scroll-target="perfected-section"><i>03</i><strong>全成就</strong><span id="perfected-count">—</span><b>↘</b></button>
-      </nav>
+    <section id="archive-view" class="page" data-screen-label="玩家档案" hidden>
+      <div class="page-intro">
+        <div><p class="eyebrow"><span class="tiny-cross">+</span> A LIFE WELL PLAYED</p><h1>玩过的世界，<span>都是我的收藏。</span></h1><p class="intro-copy">留给热爱的时间，和一路收集的成就。</p></div>
+        <a class="archive-stamp" href="#journey" aria-label="查看游戏足迹"><i data-lucide="gamepad-2" aria-hidden="true"></i><span>私人游戏档案<br><b>EST. <span id="start-year">2014</span></b></span></a>
+      </div>
 
-      <section class="collection-section" id="recent-section" aria-labelledby="recent-title">
-        <header class="section-heading">
-          <div><p>01 / RECENTLY PLAYED</p><h2 id="recent-title">近期游玩</h2></div>
-          <button class="text-action" type="button" data-view-target="timeline">查看完整时间线 <span>→</span></button>
-        </header>
-        <div class="recent-grid" id="recent-grid"></div>
+      <section class="feature" aria-labelledby="feature-title">
+        <div class="feature-copy">
+          <div class="feature-kicker"><span class="red-line"></span> 随心珍藏 <span class="mono">RANDOM PICK</span></div>
+          <h2 id="feature-title">打开一份珍藏</h2>
+          <p class="feature-subtitle" id="feature-subtitle">这一次，翻到这份喜欢的收藏。</p>
+          <div class="feature-numbers"><span><strong id="hero-hours">—</strong><small>小时的游玩</small></span><span><strong id="hero-achievements">—</strong><small id="hero-achievement-label">成就已收集</small></span></div>
+          <button class="primary-button" id="hero-open" type="button">翻开这份收藏 <i data-lucide="arrow-up-right" aria-hidden="true"></i></button>
+        </div>
+        <div class="feature-art">
+          <img id="hero-image" alt="游戏主视觉" fetchpriority="high">
+          <span class="art-caption mono" id="hero-art-caption"></span>
+          <button class="hero-achievement" id="hero-medal" type="button"></button>
+        </div>
       </section>
 
-      <section class="collection-section" id="liked-section" aria-labelledby="liked-title">
-        <header class="section-heading">
-          <div><p>02 / FROM FAVORITE</p><h2 id="liked-title">我的推荐</h2></div>
-          <button class="text-action" type="button" data-library-filter="favorite">查看全部喜欢 <span>→</span></button>
-        </header>
-        <div class="poster-grid showcase-posters" id="favorite-grid"></div>
+      <section class="stat-strip" aria-label="游戏档案统计" id="archive-stats"></section>
+
+      <section class="section-block" aria-labelledby="favorites-title">
+        <div class="section-heading"><div><p class="eyebrow">THE PERSONAL PICKS</p><h2 id="favorites-title">总有一些，<span>想再玩一次。</span><sup>我的心头好</sup></h2></div><a href="#collection?filter=favorite" class="text-link">全部喜欢 <span id="favorite-total">14</span> <i data-lucide="arrow-right" aria-hidden="true"></i></a></div>
+        <div class="favorites-shelf" id="favorites-shelf"></div>
       </section>
 
-      <section class="collection-section perfected-section" id="perfected-section" aria-labelledby="perfected-title">
-        <header class="section-heading">
-          <div><p>03 / PERFECT GAMES</p><h2 id="perfected-title">全成就陈列馆</h2></div>
-          <button class="text-action" type="button" data-library-filter="perfected">查看全部全成就 <span>→</span></button>
-        </header>
-        <div class="perfected-grid" id="perfected-grid"></div>
+      <div class="two-column">
+        <section class="section-block achievement-highlight" aria-labelledby="rare-title">
+          <div class="section-heading"><div><p class="eyebrow">SMALL BADGES, BIG MOMENTS</p><h2 id="rare-title">来之不易的勋章</h2></div><a href="#achievements" class="icon-link" aria-label="查看全部成就"><i data-lucide="arrow-up-right" aria-hidden="true"></i></a></div>
+          <div class="rare-list" id="rare-list"></div>
+          <p class="section-footnote"><i data-lucide="sparkles" aria-hidden="true"></i> 随机翻出三枚稀有成就 · 全球解锁比例 ≤ 5%。</p>
+        </section>
+        <section class="section-block recent-highlight" aria-labelledby="recent-title">
+          <div class="section-heading"><div><p class="eyebrow">MOMENTS FROM THE ARCHIVE</p><h2 id="recent-title">回忆翻到，这一页。</h2></div><a href="#journey" class="icon-link" aria-label="查看完整游玩足迹"><i data-lucide="arrow-up-right" aria-hidden="true"></i></a></div>
+          <div class="recent-list" id="recent-list"></div>
+          <p class="section-footnote"><i data-lucide="history" aria-hidden="true"></i> 随机回顾档案中的游玩记录。</p>
+        </section>
+      </div>
+
+      <section class="completion-shelf section-block" aria-labelledby="completed-title">
+        <div class="section-heading"><div><p class="eyebrow">EVERY LAST ACHIEVEMENT</p><h2 id="completed-title">每一枚，都没有落下。</h2></div><a href="#collection?filter=perfected" class="text-link">全成就收藏 <i data-lucide="arrow-right" aria-hidden="true"></i></a></div>
+        <div id="completion-grid" class="completion-grid"></div>
       </section>
     </section>
 
-    <section class="view" data-view-panel="timeline" aria-labelledby="timeline-title" hidden>
-      <header class="page-heading">
-        <p class="eyebrow">LAST 30 DAYS</p>
-        <h1 id="timeline-title">游玩时间线</h1>
-        <p>查看最近 30 天内同步到的游玩记录。</p>
-      </header>
-      <div class="toolbar timeline-toolbar">
-        <label class="search-field">
-          <span class="sr-only">搜索时间线中的游戏</span>
-          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-          <input id="timeline-search" type="search" placeholder="搜索游戏">
-        </label>
-        <span class="result-count" id="timeline-count"></span>
-      </div>
-      <div class="timeline-list" id="timeline-list"></div>
-      <button class="load-more" id="timeline-more" type="button">加载更多记录</button>
+    <section id="collection-view" class="page inner-page" data-screen-label="游戏收藏" hidden>
+      <div class="inner-intro"><p class="eyebrow">THE COLLECTION</p><h1>我的游戏收藏<span class="title-dot">.</span></h1><p>每一张封面后面，都是一个值得打开的世界。</p></div>
+      <div class="collection-toolbar"><div id="collection-filters" class="filter-tabs" aria-label="收藏筛选"><button type="button" data-filter="all" aria-pressed="true">全部收藏 <span></span></button><button type="button" data-filter="favorite" aria-pressed="false">心头好 <span></span></button><button type="button" data-filter="perfected" aria-pressed="false">全成就 <span></span></button><button type="button" data-filter="unplayed" aria-pressed="false">等待开封 <span></span></button></div><div class="collection-controls"><label class="search-box"><i data-lucide="search" aria-hidden="true"></i><input type="search" id="collection-search" placeholder="搜索你的收藏" aria-label="搜索游戏名称"><kbd>/</kbd></label><label class="sort-box"><span class="sr-only">收藏排序</span><select id="collection-sort"><option value="personal">收藏优先</option><option value="hours">游玩时长</option><option value="recent">最近记录</option><option value="achievement">成就进度</option><option value="name">游戏名称</option></select><i data-lucide="chevrons-up-down" aria-hidden="true"></i></label></div></div>
+      <div class="result-line"><p id="collection-result" aria-live="polite"></p><span class="mono">YOUR NEXT WORLD IS HERE</span></div>
+      <div class="library-grid" id="library-grid"></div>
+      <button class="secondary-button load-more" id="library-more" type="button">再翻一页 <i data-lucide="arrow-down" aria-hidden="true"></i></button>
     </section>
 
-    <section class="view" data-view-panel="library" aria-labelledby="library-title" hidden>
-      <header class="page-heading library-heading">
-        <div><p class="eyebrow">FULL LIBRARY</p><h1 id="library-title">全部游戏</h1></div>
-        <p id="library-summary">—</p>
-      </header>
-      <div class="toolbar library-toolbar">
-        <label class="search-field">
-          <span class="sr-only">搜索全部游戏</span>
-          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-          <input id="library-search" type="search" placeholder="搜索 330 款游戏">
-        </label>
-        <div class="filter-chips" role="group" aria-label="游戏筛选">
-          <button type="button" data-filter="all" aria-pressed="true">全部</button>
-          <button type="button" data-filter="favorite" aria-pressed="false">喜欢</button>
-          <button type="button" data-filter="perfected" aria-pressed="false">全成就</button>
-        </div>
-        <label class="select-field">排序
-          <select id="library-sort">
-            <option value="curated" selected>我的排序</option>
-            <option value="recent">最近游玩</option>
-            <option value="playtime">游玩时长</option>
-            <option value="achievement">成就进度</option>
-          </select>
-        </label>
-      </div>
-      <div class="library-result-line" aria-live="polite" id="library-result-line"></div>
-      <div class="poster-grid library-grid" id="library-grid"></div>
-      <button class="load-more" id="library-more" type="button">加载更多游戏</button>
+    <section id="achievements-view" class="page inner-page" data-screen-label="成就陈列柜" hidden>
+      <div class="inner-intro"><p class="eyebrow">THE TROPHY CABINET</p><h1>把高光，摆进陈列柜<span class="title-dot">.</span></h1><p>那些不止于通关的执着，都有一枚小小的证明。</p></div>
+      <div class="achievement-overview" id="achievement-overview"></div>
+      <div class="game-selectors" id="achievement-games" aria-label="选择成就游戏"></div>
+      <div class="achievement-toolbar"><div class="filter-tabs" id="achievement-filters" aria-label="成就筛选"><button type="button" data-achievement-filter="all" aria-pressed="true">全部成就</button><button type="button" data-achievement-filter="unlocked" aria-pressed="false">已解锁</button><button type="button" data-achievement-filter="rare" aria-pressed="false">稀有成就 <span>≤ 5%</span></button><button type="button" data-achievement-filter="locked" aria-pressed="false">未解锁</button></div><label class="sort-box"><span class="sr-only">成就排序</span><select id="achievement-sort"><option value="rarity">稀有程度</option><option value="recent">最近解锁</option><option value="game">游戏 / 成就名称</option></select><i data-lucide="chevrons-up-down" aria-hidden="true"></i></label></div>
+      <div class="result-line"><p id="achievement-result" aria-live="polite"></p><span id="achievement-coverage"></span></div>
+      <div id="achievement-grid" class="achievement-grid"></div>
+      <button class="secondary-button load-more" id="achievement-more" type="button">查看更多成就 <i data-lucide="arrow-down" aria-hidden="true"></i></button>
+    </section>
+
+    <section id="journey-view" class="page inner-page" data-screen-label="冒险足迹" hidden>
+      <div class="inner-intro"><p class="eyebrow">THE TIME WELL SPENT</p><h1>时间会记得，我去过哪里<span class="title-dot">.</span></h1><p>沿着记录，重温那些还不想退出游戏的日子。</p></div>
+      <div class="journey-overview" id="journey-overview"></div>
+      <section class="activity-panel" aria-labelledby="activity-title"><div class="activity-heading"><div><h2 id="activity-title">留在日历里的冒险</h2><p>每一格，是当天记录到的游玩时长。</p></div><label class="sort-box"><span class="sr-only">查看月份</span><select id="journey-month"></select><i data-lucide="chevrons-up-down" aria-hidden="true"></i></label></div><div class="activity-scroll"><div id="activity-grid" class="activity-grid"></div></div><div class="activity-legend"><span>少</span><i></i><i></i><i></i><i></i><i></i><span>多</span></div></section>
+      <div class="section-heading journey-heading"><div><p class="eyebrow">ONE SAVE AT A TIME</p><h2>游玩记录</h2></div><span class="section-note">记录同步发现的时长增量，非单次会话</span></div>
+      <div id="journey-list" class="journey-list"></div>
+      <button class="secondary-button load-more" id="journey-more" type="button">继续往前翻 <i data-lucide="arrow-down" aria-hidden="true"></i></button>
     </section>
   </main>
 
-  <footer class="app-footer">
-    <span>STEAM LIBRARY ARCHIVE</span>
-    <span id="footer-summary">只读数据快照</span>
-  </footer>
+  <footer class="site-footer"><div><a class="footer-brand" href="#archive"><i data-lucide="flag" aria-hidden="true"></i> 存档点 <span>CHECKPOINT</span></a><p>时间留给游戏，回忆留在这里。</p></div><div class="footer-meta"><span id="data-dates"></span><span>游戏图片与成就来自 Steam / 各游戏发行商</span></div></footer>
 
-  <dialog class="game-dialog" id="game-dialog">
-    <button class="dialog-close" id="dialog-close" type="button" aria-label="关闭详情">×</button>
-    <div class="dialog-poster poster-shell" id="dialog-poster"></div>
-    <div class="dialog-content">
-      <p class="eyebrow" id="dialog-kicker">GAME DETAIL</p>
-      <h2 id="dialog-title"></h2>
-      <div class="dialog-stats" id="dialog-stats"></div>
-      <div class="dialog-progress"><span id="dialog-progress-bar"></span></div>
-      <div class="dialog-tags" id="dialog-tags"></div>
-    </div>
-  </dialog>
-
-  <div class="data-error" id="data-error" role="alert" hidden>
-    未找到真实数据快照，请先运行 <code>npm run site:data</code>。
-  </div>
+  <dialog id="game-dialog" class="game-dialog" aria-labelledby="dialog-title"><button type="button" class="dialog-close" aria-label="关闭游戏详情"><i data-lucide="x" aria-hidden="true"></i></button><div id="game-dialog-content"></div></dialog>
+  <dialog id="achievement-dialog" class="achievement-dialog" aria-labelledby="achievement-dialog-title"><button type="button" class="dialog-close" aria-label="关闭成就详情"><i data-lucide="x" aria-hidden="true"></i></button><div id="achievement-dialog-content"></div></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
 </body>
 </html>

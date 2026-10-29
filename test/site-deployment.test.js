@@ -222,3 +222,22 @@ test('最新备份损坏时拒绝生成站点', async () => {
         /Latest snapshot is invalid: games\.csv is missing or corrupt/
     );
 });
+
+test('成就业务数据变化会触发部署，内容相同的成就快照保持跳过部署', async (t) => {
+    const storage = new MemoryStorage();
+    await seedLatestSnapshot(storage);
+    const siteRoot = temporarySite(t);
+    const achievementData = { updatedAt: '2026-10-29T00:00:00Z', games: [{
+        appid: 1, achievements: [{ id: 'A', unlocked: true, globalPercent: 2 }],
+    }] };
+    const loadAchievements = async (sourceGames) => { assert.deepEqual(sourceGames, games); return achievementData; };
+    const first = await prepareSiteDeployment({ storage, siteRoot, loadAchievements });
+    await markSiteDeployed({ storage, siteRoot, deploymentHash: first.deploymentHash, sourcePrefix: first.sourcePrefix,
+        sourceContentHash: first.sourceContentHash, snapshotCompletedAt: first.snapshotCompletedAt });
+    const unchanged = await prepareSiteDeployment({ storage, siteRoot, loadAchievements });
+    assert.equal(unchanged.changed, false);
+    achievementData.games[0].achievements[0].globalPercent = 3;
+    const changed = await prepareSiteDeployment({ storage, siteRoot, loadAchievements });
+    assert.equal(changed.changed, true);
+    assert.notEqual(changed.deploymentHash, first.deploymentHash);
+});
