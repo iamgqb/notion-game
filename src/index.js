@@ -19,6 +19,7 @@ const {
     getGameAchievements,
 } = require('./steam');
 const config = require('./config');
+const { fetchGameArtwork } = require('./steam-artwork');
 
 /**
  * Fetches all pages from a Notion database, automatically handling pagination.
@@ -68,6 +69,12 @@ async function syncSteamGamesToNotion() {
         } pages in Notion.`
     );
 
+    const artwork = await fetchGameArtwork(Object.values(steamGames).map((game) => game.appid))
+        .catch((error) => {
+            console.warn('Steam 封面暂不可用，保留已有封面：', error.message);
+            return {};
+        });
+
     // 2. Create a map of Notion pages by appid for efficient lookups.
     const notionAppIdMap = notionPages.reduce((map, page) => {
         const appid = page.properties?.appid?.number;
@@ -84,9 +91,9 @@ async function syncSteamGamesToNotion() {
 
         try {
             if (existingPage) {
-                await updateExistingGamePage(game, existingPage);
+                await updateExistingGamePage(game, existingPage, artwork[game.appid]);
             } else {
-                await createNewGamePage(game, buyTime);
+                await createNewGamePage(game, buyTime, artwork[game.appid]);
             }
         } catch (error) {
             // Log errors for individual games without stopping the entire sync process.
@@ -105,8 +112,9 @@ async function syncSteamGamesToNotion() {
  *
  * @param {object} game - The game object from the Steam API.
  * @param {object} page - The corresponding page object from the Notion API.
+ * @param {object} [artwork] - Steam 最新的公开封面资源。
  */
-async function updateExistingGamePage(game, page) {
+async function updateExistingGamePage(game, page, artwork) {
     const propertiesToUpdate = {};
     const { properties: existingProperties } = page;
 
@@ -136,11 +144,14 @@ async function updateExistingGamePage(game, page) {
         }
     }
 
-    // If there are properties to update, call the Notion API.
-    if (Object.keys(propertiesToUpdate).length > 0) {
+    const coverUrl = artwork?.hero;
+    const updateCover = coverUrl && page.cover?.external?.url !== coverUrl;
+    // 封面更新独立于游玩时间，修复未再游玩游戏的旧地址。
+    if (Object.keys(propertiesToUpdate).length > 0 || updateCover) {
         console.log(`Updating ${game.name}...`);
         await notion.updatePage(config.notionApiKey, page.id, {
             properties: propertiesToUpdate,
+            ...(updateCover ? { cover: { type: 'external', external: { url: coverUrl } } } : {}),
         });
     }
 
@@ -159,8 +170,9 @@ async function updateExistingGamePage(game, page) {
  *
  * @param {object} game - The game object from the Steam API.
  * @param {string} buyTime - UTC+8 扫描日期的前一天，格式为 YYYY-MM-DD。
+ * @param {object} [artwork] - Steam 最新的公开封面资源。
  */
-async function createNewGamePage(game, buyTime) {
+async function createNewGamePage(game, buyTime, artwork) {
     console.log(`Adding new game to Notion: ${game.name}`);
     const { completionRate } = await getGameAchievements(
         config.steamKey,
@@ -183,8 +195,10 @@ async function createNewGamePage(game, buyTime) {
     const pageData = {
         properties,
         cover: {
+            type: 'external',
             external: {
-                url: `https://cdn.akamai.steamstatic.com/steam/apps/${game.appid}/header.jpg`,
+                url: artwork?.hero || artwork?.header ||
+                    `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${game.appid}/library_hero.jpg`,
             },
         },
     };

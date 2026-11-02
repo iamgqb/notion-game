@@ -5,6 +5,7 @@ const path = require('path');
 const { loadEnv } = require('../load-env');
 const { fetchDatabasePages } = require('../backup/notion-source');
 const { normalizeGames, normalizeHistory } = require('../backup/core');
+const { fetchGameArtwork } = require('../steam-artwork');
 
 /** @author yuecheng */
 function dateStart(value) {
@@ -13,11 +14,17 @@ function dateStart(value) {
 
 /**
  * Produces the smallest useful static dataset for the site. The source queries
- * are read-only and the generated file contains normalized business fields only.
+ * are read-only and the generated file contains business fields and public artwork URLs.
  *
  * @author yuecheng
  */
-function buildSiteData(games, history, generatedAt = new Date(), achievementData = { updatedAt: null, games: [] }) {
+function buildSiteData(
+    games,
+    history,
+    generatedAt = new Date(),
+    achievementData = { updatedAt: null, games: [] },
+    artwork = {}
+) {
     const historyByAppId = new Map();
     const recentCutoff = generatedAt.getTime() - 30 * 24 * 60 * 60 * 1000;
     const uniqueGames = new Map();
@@ -62,6 +69,7 @@ function buildSiteData(games, history, generatedAt = new Date(), achievementData
         return {
             name: game.name,
             appid: game.appid,
+            artwork: artwork[game.appid] ?? null,
             playTimeMinutes: game.play_time ?? 0,
             achievementRate,
             buyTime: dateStart(game.buy_time),
@@ -114,9 +122,10 @@ function writeSiteData(
     history,
     generatedAt = new Date(),
     outputPath = path.resolve(__dirname, '../../site/data.js'),
-    achievementData = { updatedAt: null, games: [] }
+    achievementData = { updatedAt: null, games: [] },
+    artwork = {}
 ) {
-    const data = buildSiteData(games, history, generatedAt, achievementData);
+    const data = buildSiteData(games, history, generatedAt, achievementData, artwork);
     const serialized = JSON.stringify(data).replaceAll('<', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
     const output = `window.NOTION_GAME_DATA = ${serialized};\n`;
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
@@ -156,18 +165,21 @@ async function main() {
     let cache = null;
     try { cache = JSON.parse(fs.readFileSync(cachePath, 'utf8')); }
     catch (error) { if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error; }
-    const achievementResult = await refreshAchievements({
-        games, cache, steamKey: config.steamKey, steamId: config.steamId,
-        onProgress: ({ completed, total, failed }) => {
-            if (completed % 10 === 0 || completed === total) console.log(`成就采集 ${completed}/${total}，暂不可用 ${failed} 款`);
-        },
-    });
+    const [achievementResult, artwork] = await Promise.all([
+        refreshAchievements({
+            games, cache, steamKey: config.steamKey, steamId: config.steamId,
+            onProgress: ({ completed, total, failed }) => {
+                if (completed % 10 === 0 || completed === total) console.log(`成就采集 ${completed}/${total}，暂不可用 ${failed} 款`);
+            },
+        }),
+        fetchGameArtwork(games.map((game) => game.appid)),
+    ]);
     if (achievementResult.changed) {
         fs.mkdirSync(path.dirname(cachePath), { recursive: true });
         fs.writeFileSync(`${cachePath}.tmp`, `${JSON.stringify(achievementResult.cache)}\n`);
         fs.renameSync(`${cachePath}.tmp`, cachePath);
     }
-    const { data, outputPath } = writeSiteData(games, normalizeHistory(historyPages), new Date(), undefined, achievementResult.data);
+    const { data, outputPath } = writeSiteData(games, normalizeHistory(historyPages), new Date(), undefined, achievementResult.data, artwork);
     console.log(
         `已只读导出 ${data.meta.counts.games} 款游戏和 ` +
             `${data.meta.counts.history} 条历史记录、${achievementResult.data.games.length} 款成就明细到 ${outputPath}`

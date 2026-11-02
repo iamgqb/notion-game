@@ -30,9 +30,11 @@
     $('#hero-achievement-label').textContent = heroAchievements.length ? '成就已收集' : '成就完成率';
     $('#hero-open').dataset.openGame = hero.appid;
     const image = $('#hero-image');
-    image.dataset.heroAppid = hero.appid;
+    image.dataset.gameAppid = hero.appid;
+    delete image.dataset.fallback;
+    image.classList.remove('is-missing');
     image.alt = `${hero.name}游戏主视觉`;
-    image.src = `https://cdn.akamai.steamstatic.com/steam/apps/${hero.appid}/library_hero.jpg`;
+    image.src = cover(hero.appid);
     $('#hero-art-caption').textContent = hero.name;
     const medal = sample(unlocked, 1, [], a => a.id)[0];
     const medalButton = $('#hero-medal');
@@ -49,7 +51,7 @@
   }
 
   function icons() { window.lucide?.createIcons({ attrs: { 'aria-hidden': 'true' } }); }
-  function cover(appid) { return `https://cdn.akamai.steamstatic.com/steam/apps/${Number(appid)}/library_600x900_2x.jpg`; }
+  function cover(appid) { return gameMap.get(Number(appid))?.artwork?.hero || `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${Number(appid)}/library_hero.jpg`; }
   function achievementIcon(a) { return (a.unlocked ? a.icon : a.iconGray) || a.icon || 'assets/achievement-placeholder.svg'; }
   function gameName(appid) { return gameMap.get(Number(appid))?.name ?? history.find(h => h.appid === Number(appid))?.name ?? '未归档游戏'; }
   function artwork(a, className = '') { return `<img class="${className}" data-achievement-icon="true" src="${esc(achievementIcon(a))}" alt="${esc(a.name)}成就图标" loading="lazy">`; }
@@ -58,7 +60,7 @@
   function gameCard(game, index = null) {
     const perfect = game.achievementRate === 1;
     return `<button type="button" class="game-card" data-open-game="${game.appid}" aria-label="查看${esc(game.name)}详情">
-      <span class="cover-wrap"><span class="cover-fallback">${esc(game.name)}</span><img src="${cover(game.appid)}" alt="${esc(game.name)}封面" loading="lazy">${perfect ? `<span class="cover-tape">${icon('trophy')} 全成就</span>` : ''}${game.favorite ? `<span class="cover-favorite">${icon('heart')}</span>` : ''}</span>
+      <span class="cover-wrap"><span class="cover-fallback">${esc(game.name)}</span><img data-game-appid="${game.appid}" src="${esc(cover(game.appid))}" alt="${esc(game.name)}封面" loading="lazy">${perfect ? `<span class="cover-tape">${icon('trophy')} 全成就</span>` : ''}${game.favorite ? `<span class="cover-favorite">${icon('heart')}</span>` : ''}</span>
       <strong class="game-card-title">${esc(game.name)}</strong><span class="game-card-bottom"><span>${duration(game.playTimeMinutes)}</span><b class="${perfect ? '' : 'progress-muted'}">${perfect ? 'COMPLETE' : Number.isFinite(game.achievementRate) && game.achievementRate >= 0 ? rateLabel(game.achievementRate) : '—'}</b></span>${index !== null ? `<span class="shelf-number">COLLECTION / ${String(index + 1).padStart(2, '0')}</span>` : ''}
     </button>`;
   }
@@ -82,11 +84,11 @@
     const rarePicks = selection.rare;
     $('#rare-list').innerHTML = rarePicks.map(a => `<button type="button" class="rare-item" data-achievement="${esc(a.key)}">${artwork(a)}<span class="rare-item-copy"><strong>${esc(a.name)}</strong><small>${esc(gameName(a.appid))}</small></span><span class="rarity"><span>${icon('gem')}${percent(a.globalPercent)}</span><small>全球玩家解锁</small></span></button>`).join('') || empty('还没有收藏到稀有勋章', '全球解锁比例不高于 5% 的已解锁成就会出现在这里。', 'gem');
     const recent = selection.memories;
-    $('#recent-list').innerHTML = recent.map(g => `<button type="button" class="recent-item" data-open-game="${g.appid}"><img src="${cover(g.appid)}" alt="${esc(g.name)}封面" loading="lazy"><span><strong>${esc(g.name)}</strong><small>${shortDate(g.lastPlayed)} · 记录增量</small></span><span class="recent-duration">+ ${duration(g.lastSessionMinutes)}<small>累计 ${duration(g.playTimeMinutes)}</small></span></button>`).join('') || empty('冒险还没有留下足迹', '有游玩记录后，就能从这里翻看回忆。', 'footprints');
+    $('#recent-list').innerHTML = recent.map(g => `<button type="button" class="recent-item" data-open-game="${g.appid}"><img data-game-appid="${g.appid}" src="${esc(cover(g.appid))}" alt="${esc(g.name)}封面" loading="lazy"><span><strong>${esc(g.name)}</strong><small>${shortDate(g.lastPlayed)} · 记录增量</small></span><span class="recent-duration">+ ${duration(g.lastSessionMinutes)}<small>累计 ${duration(g.playTimeMinutes)}</small></span></button>`).join('') || empty('冒险还没有留下足迹', '有游玩记录后，就能从这里翻看回忆。', 'footprints');
     $('#completion-grid').innerHTML = selection.completed.map(g => {
       const ag = achievementGames.get(g.appid);
       const progress = ag ? `${ag.achievements.filter(a => a.unlocked).length} / ${ag.achievements.length} 成就` : '100% 成就完成';
-      return `<button type="button" class="completion-item" data-open-game="${g.appid}"><img src="${cover(g.appid)}" alt="${esc(g.name)}封面" loading="lazy"><span><strong>${esc(g.name)}</strong><small>${progress} · ${duration(g.playTimeMinutes)}</small></span>${icon('award')}</button>`;
+      return `<button type="button" class="completion-item" data-open-game="${g.appid}"><img data-game-appid="${g.appid}" src="${esc(cover(g.appid))}" alt="${esc(g.name)}封面" loading="lazy"><span><strong>${esc(g.name)}</strong><small>${progress} · ${duration(g.playTimeMinutes)}</small></span>${icon('award')}</button>`;
     }).join('') || empty('下一段圆满旅程，等待开启', '完成率达到 100% 的游戏会收进这里。', 'trophy');
   }
 
@@ -132,7 +134,7 @@
     $('#achievement-overview').innerHTML = [
       ['medal', unlocked.length, '枚已收集成就'], ['gem', rare.length, '枚稀有成就 · 全球解锁 ≤ 5%'], ['trophy', achievementData.games.filter(g => g.achievements.every(a => a.unlocked)).length, '款全成就游戏 · 本次读取'],
     ].map(([symbol, count, caption]) => `<div>${icon(symbol)}<span><b>${formatNumber(count)}</b><small>${esc(caption)}</small></span></div>`).join('');
-    $('#achievement-games').innerHTML = `<button class="game-selector" type="button" data-achievement-game="all" aria-pressed="true">${icon('layout-grid')}<span>全部成就<small>${achievementData.games.length} GAMES / ${achievements.length} BADGES</small></span></button>` + achievementData.games.map(g => `<button class="game-selector" type="button" data-achievement-game="${g.appid}" aria-pressed="false"><img src="${cover(g.appid)}" alt="" loading="lazy"><span>${esc(gameName(g.appid))}<small>${g.achievements.filter(a => a.unlocked).length} / ${g.achievements.length}</small></span></button>`).join('');
+    $('#achievement-games').innerHTML = `<button class="game-selector" type="button" data-achievement-game="all" aria-pressed="true">${icon('layout-grid')}<span>全部成就<small>${achievementData.games.length} GAMES / ${achievements.length} BADGES</small></span></button>` + achievementData.games.map(g => `<button class="game-selector" type="button" data-achievement-game="${g.appid}" aria-pressed="false"><img data-game-appid="${g.appid}" src="${esc(cover(g.appid))}" alt="" loading="lazy"><span>${esc(gameName(g.appid))}<small>${g.achievements.filter(a => a.unlocked).length} / ${g.achievements.length}</small></span></button>`).join('');
   }
 
   function renderAchievements() {
@@ -205,7 +207,7 @@
     const visible = records.slice(0, state.journeyLimit);
     const groups = new Map();
     for (const record of visible) { const key = dayKey(record.date); const list = groups.get(key) ?? []; list.push(record); groups.set(key, list); }
-    $('#journey-list').innerHTML = [...groups].map(([date, rows]) => `<section class="journey-day"><time class="journey-date" datetime="${date}"><b>${date.slice(8)}</b><span>${date.slice(0, 7).replace('-', ' / ')}</span></time><div class="journey-day-records">${rows.map(record => `<button type="button" class="journey-row" data-open-game="${record.appid}"><img src="${cover(record.appid)}" alt="${esc(record.name)}封面" loading="lazy"><span><strong>${esc(record.name)}</strong><small>记录到新的游玩增量</small></span><span class="journey-minutes">+ ${duration(record.minutes)}<small>游戏时间</small></span></button>`).join('')}</div></section>`).join('') || empty('这一页还没有留下足迹', '换一个月份，看看你走过的世界。', 'footprints');
+    $('#journey-list').innerHTML = [...groups].map(([date, rows]) => `<section class="journey-day"><time class="journey-date" datetime="${date}"><b>${date.slice(8)}</b><span>${date.slice(0, 7).replace('-', ' / ')}</span></time><div class="journey-day-records">${rows.map(record => `<button type="button" class="journey-row" data-open-game="${record.appid}"><img data-game-appid="${record.appid}" src="${esc(cover(record.appid))}" alt="${esc(record.name)}封面" loading="lazy"><span><strong>${esc(record.name)}</strong><small>记录到新的游玩增量</small></span><span class="journey-minutes">+ ${duration(record.minutes)}<small>游戏时间</small></span></button>`).join('')}</div></section>`).join('') || empty('这一页还没有留下足迹', '换一个月份，看看你走过的世界。', 'footprints');
     $('#journey-more').hidden = visible.length >= records.length;
     renderActivity();
     icons();
@@ -227,7 +229,7 @@
       details = `<div class="dialog-section-title"><h3>成就进度</h3><span>${rateLabel(game.achievementRate)}</span></div><div class="progress-bar"><span style="width:${rate}%"></span></div><div class="dialog-notice">${icon('info')}<p>这款游戏暂无可展示的成就明细。${validRate ? '当前完成率来自游戏档案。' : '游戏可能没有成就，或成就数据暂不可用。'}</p></div>`;
     }
     const recordMarkup = !ag && records.length ? `<div class="dialog-section-title" style="margin-top:25px"><h3>最近的游玩记录</h3><span>同步发现的时长增量</span></div><div class="dialog-records">${records.map(r => `<div class="dialog-record"><span>${shortDate(r.date)}</span><span>+ ${duration(r.minutes)}</span></div>`).join('')}</div>` : '';
-    $('#game-dialog-content').innerHTML = `<div class="dialog-head"><img class="dialog-cover" src="${cover(game.appid)}" alt="${esc(game.name)}封面"><div class="dialog-game-info"><p class="eyebrow">THE COLLECTION / STEAM ${game.appid}</p><h2 id="dialog-title">${esc(game.name)}</h2><div class="dialog-badges">${badges || '<span class="tag">我的收藏</span>'}</div><div class="dialog-stat-row"><span><b>${hours(game.playTimeMinutes)}</b>小时累计游玩</span><span><b>${validRate ? `${rate}%` : '—'}</b>成就完成率</span><span><b>${game.historyCount}</b>条历史记录</span></div></div></div><div class="dialog-content-body">${details}${recordMarkup}<div class="dialog-action-row"><button class="primary-button" type="button" data-view-game-achievements="${ag ? game.appid : 'all'}">${ag ? '查看这款游戏的全部成就' : '探索成就陈列柜'} ${icon('arrow-up-right')}</button><a class="text-link" href="https://store.steampowered.com/app/${game.appid}/" target="_blank" rel="noopener noreferrer">Steam 商店 ${icon('external-link')}</a></div></div>`;
+    $('#game-dialog-content').innerHTML = `<div class="dialog-head"><img class="dialog-cover" data-game-appid="${game.appid}" src="${esc(cover(game.appid))}" alt="${esc(game.name)}封面"><div class="dialog-game-info"><p class="eyebrow">THE COLLECTION / STEAM ${game.appid}</p><h2 id="dialog-title">${esc(game.name)}</h2><div class="dialog-badges">${badges || '<span class="tag">我的收藏</span>'}</div><div class="dialog-stat-row"><span><b>${hours(game.playTimeMinutes)}</b>小时累计游玩</span><span><b>${validRate ? `${rate}%` : '—'}</b>成就完成率</span><span><b>${game.historyCount}</b>条历史记录</span></div></div></div><div class="dialog-content-body">${details}${recordMarkup}<div class="dialog-action-row"><button class="primary-button" type="button" data-view-game-achievements="${ag ? game.appid : 'all'}">${ag ? '查看这款游戏的全部成就' : '探索成就陈列柜'} ${icon('arrow-up-right')}</button><a class="text-link" href="https://store.steampowered.com/app/${game.appid}/" target="_blank" rel="noopener noreferrer">Steam 商店 ${icon('external-link')}</a></div></div>`;
     icons();
     const dialog = $('#game-dialog');
     if (!dialog.open) dialog.showModal();
@@ -318,15 +320,11 @@
         img.src = 'assets/achievement-placeholder.svg';
         return;
       }
-      if (img.dataset.heroAppid && !img.dataset.fallback) {
+      if (img.dataset.gameAppid && !img.dataset.fallback) {
         img.dataset.fallback = 'true';
-        img.src = `https://cdn.akamai.steamstatic.com/steam/apps/${img.dataset.heroAppid}/header.jpg`;
+        const appid = Number(img.dataset.gameAppid);
+        img.src = gameMap.get(appid)?.artwork?.header || `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`;
         return;
-      }
-      if (img.src.includes('library_600x900') && !img.dataset.fallback) {
-        img.dataset.fallback = 'true';
-        const appid = img.src.match(/apps\/(\d+)/)?.[1];
-        if (appid) { img.src = `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`; return; }
       }
       img.classList.add('is-missing');
     }, true);
@@ -349,9 +347,9 @@
       achievements = achievementData.games.flatMap(g => g.achievements.map(a => ({ ...a, appid: g.appid, key: `${g.appid}:${a.id}` })));
       for (const g of games) if (g.achievementRate < 0) g.achievementRate = null;
       history = [...library.history].sort((a, b) => b.date.localeCompare(a.date) || b.minutes - a.minutes);
+      wireInteractions();
       renderArchive(); renderAchievementHeader(); renderJourneyHeader();
       $('#data-dates').textContent = `游戏档案 ${dateLabel(library.meta.generatedAt)} · ${achievementData.updatedAt ? `成就更新 ${dateLabel(achievementData.updatedAt)}` : '成就明细暂未同步'}`;
-      wireInteractions();
       $('#loading').hidden = true;
       route();
     } catch (error) {

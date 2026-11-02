@@ -24,7 +24,7 @@
 3.  **比较和同步:**
     *   如果您 Steam 库中的游戏在 Notion 中不存在，它将创建一个包含游戏详细信息的新页面，并将购买日期（`buy_time`）填写为 UTC+8 扫描日期的前一天。
     *   如果游戏已存在，它会检查游戏时间的变化。如果游戏时间已更改，它将更新游戏时间并刷新成就完成率。
-    *   Notion 中的游戏封面图像将设置为 Steam 商店中该游戏的标题图片。
+    *   Notion 中的游戏封面使用 Steam 的 `library_hero` 主视觉；已有游戏即使游玩时间未变化，也会更新过期封面地址。
 4.  **记录历史:**
     *   当检测到游戏时间增加时，会在历史数据库中创建一个新条目，记录游戏、增量时间和日期。
 
@@ -211,7 +211,7 @@ npm run site:serve
 
 首页珍藏从有已解锁成就明细的喜欢游戏中随机选择一款，并关联该游戏的真实成就；喜欢区抽取六款，全成就区抽取六款，历史回忆抽取三款。稀有勋章从已解锁且全球解锁比例不高于 5% 的成就中抽取三枚，每款游戏最多一枚。候选不足时显示实际数量或空状态，不补样例数据。使用标签页的 `sessionStorage` 记住上一批结果，在候选足够且存储可用时保证相邻刷新更换选品。
 
-历史记录表示同步发现的游玩时长增量，并非精确会话。游戏档案与成就明细的更新时间分别展示在页脚。游戏图片通过 Steam CDN 按需加载，失败时降级为横幅或占位图。Lucide 图标许可证位于 `site/assets/lucide-LICENSE`。
+历史记录表示同步发现的游玩时长增量，并非精确会话。游戏档案与成就明细的更新时间分别展示在页脚。游戏封面与首页主视觉统一使用 Steam 的 `library_hero`。构建与同步时通过 Steam 官方 `IStoreBrowseService/GetItems/v1` 接口批量请求 `include_assets`，将返回的 `library_hero` 文件路径代入 `asset_url_format`，保留哈希目录、本地化文件名和版本参数，再从 `shared.fastly.steamstatic.com/store_item_assets/` 加载，避免依赖旧的固定 CDN 路径。网站图片失败时降级为同一接口返回的商店横幅，再显示占位；商店接口请求失败时保留 Notion 已有封面，并拒绝发布缺失图片元数据的新站点。未公开或已下架游戏可能没有资源元数据，会尝试常规 `library_hero` 地址。资源类型说明见 [Steamworks Library Assets](https://partner.steamgames.com/doc/store/assets/libraryassets)。Lucide 图标许可证位于 `site/assets/lucide-LICENSE`。
 
 ### 自动部署流程
 
@@ -220,7 +220,7 @@ npm run site:serve
 1. 从 R2 的 `state/latest.json` 读取最新有效备份，并校验清单、文件哈希和业务内容哈希。
 2. 使用备份中的 `games.json.gz` 与 `history.json.gz` 读取游戏档案，部署过程不会再次请求 Notion。
 3. 使用 `STEAM_KEY`、`STEAM_ID` 和 R2 成就缓存，按需获取 Steam 成就明细；限时请求、有限重试，并发最多三款游戏。全部成就请求失败且没有有效缓存时拒绝发布空替代数据。
-4. 将档案与成就合并为 `site/data.js`，对最终 `site/` 目录以及 `wrangler.jsonc` 的文件名和文件内容计算 SHA-256。
+4. 批量获取 Steam 最新封面资源，将档案、成就与图片地址合并为 `site/data.js`，对最终 `site/` 目录以及 `wrangler.jsonc` 的文件名和文件内容计算 SHA-256；图片资源更新也会触发部署。
 5. 与 R2 的 `state/workers.json` 比较；哈希一致时返回 `SKIPPED_NO_CHANGE`，不调用 Cloudflare Workers。
 6. 只有哈希变化时才执行 `wrangler deploy`；部署成功后才更新 `state/workers.json`。
 

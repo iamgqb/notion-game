@@ -139,19 +139,24 @@ async function prepareSiteDeployment({
     configPath,
     force = false,
     loadAchievements = async () => ({ updatedAt: null, games: [] }),
+    loadArtwork = async () => ({}),
 }) {
     const snapshot = await readLatestSnapshot(storage);
     const generatedAt = new Date(snapshot.snapshotCompletedAt);
     if (!Number.isFinite(generatedAt.getTime())) {
         throw new Error('Latest snapshot has an invalid completion timestamp');
     }
-    const achievements = await loadAchievements(snapshot.games);
+    const [achievements, artwork] = await Promise.all([
+        loadAchievements(snapshot.games),
+        loadArtwork(snapshot.games),
+    ]);
     const { data } = writeSiteData(
         snapshot.games,
         snapshot.history,
         generatedAt,
         path.join(siteRoot, 'data.js'),
-        achievements
+        achievements,
+        artwork
     );
     const deploymentHash = siteDirectoryHash(siteRoot, configPath);
     const previousObject = await readDeploymentState(storage);

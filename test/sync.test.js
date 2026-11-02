@@ -4,9 +4,10 @@ const notion = require('../src/notion');
 const { syncSteamGamesToNotion } = require('../src/index');
 
 /** @author yuecheng */
-function mockSync(t, { now, games, pages = [], advanceTo }) {
+function mockSync(t, { now, games, pages = [], advanceTo, storeItems, artworkStatus = 200 }) {
     t.mock.timers.enable({ apis: ['Date'], now: new Date(now) });
     t.mock.method(console, 'log', () => {});
+    t.mock.method(console, 'warn', () => {});
     t.mock.method(notion, 'queryDatabase', async () => ({
         results: pages,
         next_cursor: null,
@@ -17,6 +18,21 @@ function mockSync(t, { now, games, pages = [], advanceTo }) {
                 t.mock.timers.setTime(new Date(advanceTo).getTime());
             }
             return { ok: true, json: async () => ({ response: { games } }) };
+        }
+        if (url.startsWith('https://api.steampowered.com/IStoreBrowseService/')) {
+            return {
+                ok: artworkStatus === 200,
+                status: artworkStatus,
+                json: async () => ({ response: { store_items: storeItems ?? games.map((game) => ({
+                    appid: game.appid,
+                    success: 1,
+                    assets: {
+                        asset_url_format: `steam/apps/${game.appid}/` + '${FILENAME}?t=123',
+                        library_hero: 'hero-hash/library_hero.jpg',
+                        header: 'header-hash/header_schinese.jpg',
+                    },
+                })) } }),
+            };
         }
         assert.ok(url.startsWith('https://api.steampowered.com/ISteamUserStats/'));
         return {
@@ -74,6 +90,93 @@ test('扫描跨越午夜时，所有新增游戏仍使用扫描开始时的前�
     for (const { arguments: [, , pageData] } of created.mock.calls) {
         assert.equal(pageData.properties.buy_time.date.start, '2026-10-06');
     }
+});
+
+test('新增游戏使用接口返回的 library_hero 封面，保留哈希和版本', async (t) => {
+    const { created } = mockSync(t, {
+        now: '2026-11-02T00:00:00Z',
+        games: [{ appid: 570, name: 'Dota 2', playtime_forever: 0 }],
+    });
+
+    await syncSteamGamesToNotion();
+
+    assert.deepEqual(created.mock.calls[0].arguments[2].cover, {
+        type: 'external',
+        external: { url: 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/570/hero-hash/library_hero.jpg?t=123' },
+    });
+});
+
+function existingGame(coverUrl) {
+    return {
+        id: 'page-570',
+        cover: { type: 'external', external: { url: coverUrl } },
+        properties: {
+            appid: { number: 570 },
+            name: { title: [{ text: { content: 'Dota 2' } }] },
+            play_time: { number: 60 },
+        },
+    };
+}
+
+test('已有游戏未再游玩也会修复旧封面，且不产生历史记录', async (t) => {
+    const { created, updated } = mockSync(t, {
+        now: '2026-11-02T00:00:00Z',
+        games: [{ appid: 570, name: 'Dota 2', playtime_forever: 60 }],
+        pages: [existingGame('https://cdn.akamai.steamstatic.com/steam/apps/570/header.jpg')],
+    });
+
+    await syncSteamGamesToNotion();
+
+    assert.equal(created.mock.callCount(), 0);
+    assert.equal(updated.mock.callCount(), 1);
+    assert.deepEqual(updated.mock.calls[0].arguments[2], {
+        properties: {},
+        cover: { type: 'external', external: {
+            url: 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/570/hero-hash/library_hero.jpg?t=123',
+        } },
+    });
+});
+
+test('封面已是最新且业务数据未变时不会重复更新 Notion', async (t) => {
+    const { created, updated } = mockSync(t, {
+        now: '2026-11-02T00:00:00Z',
+        games: [{ appid: 570, name: 'Dota 2', playtime_forever: 60 }],
+        pages: [existingGame('https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/570/hero-hash/library_hero.jpg?t=123')],
+    });
+
+    await syncSteamGamesToNotion();
+
+    assert.equal(created.mock.callCount(), 0);
+    assert.equal(updated.mock.callCount(), 0);
+});
+
+test('商店资源请求失败时保留原封面，仍可更新游戏名称', async (t) => {
+    const { created, updated } = mockSync(t, {
+        now: '2026-11-02T00:00:00Z',
+        games: [{ appid: 570, name: '新名称', playtime_forever: 60 }],
+        pages: [existingGame('https://example.com/existing-cover.jpg')],
+        artworkStatus: 403,
+    });
+
+    await syncSteamGamesToNotion();
+
+    assert.equal(created.mock.callCount(), 0);
+    assert.equal(updated.mock.callCount(), 1);
+    assert.equal(Object.hasOwn(updated.mock.calls[0].arguments[2], 'cover'), false);
+    assert.equal(updated.mock.calls[0].arguments[2].properties.name.title[0].text.content, '新名称');
+});
+
+test('已下架游戏无资源元数据时保留已有封面', async (t) => {
+    const { updated } = mockSync(t, {
+        now: '2026-11-02T00:00:00Z',
+        games: [{ appid: 570, name: 'Dota 2', playtime_forever: 60 }],
+        pages: [existingGame('https://example.com/existing-cover.jpg')],
+        storeItems: [{ appid: 570, success: 2 }],
+    });
+
+    await syncSteamGamesToNotion();
+
+    assert.equal(updated.mock.callCount(), 0);
 });
 
 test('更新已有游戏时保留已有购买日期，空日期也不自动回填', async (t) => {

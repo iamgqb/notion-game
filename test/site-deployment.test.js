@@ -241,3 +241,32 @@ test('成就业务数据变化会触发部署，内容相同的成就快照保�
     assert.equal(changed.changed, true);
     assert.notEqual(changed.deploymentHash, first.deploymentHash);
 });
+
+test('最新 library_hero 进入站点数据，图片变化独立触发部署，采集失败保留原构建', async (t) => {
+    const storage = new MemoryStorage();
+    await seedLatestSnapshot(storage);
+    const siteRoot = temporarySite(t);
+    const artwork = { 1: {
+        hero: 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1/hash/library_hero.jpg?t=1',
+        header: 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1/hash/header.jpg?t=1',
+    } };
+    const loadArtwork = async (sourceGames) => { assert.deepEqual(sourceGames, games); return artwork; };
+    const first = await prepareSiteDeployment({ storage, siteRoot, loadArtwork });
+    const dataPath = path.join(siteRoot, 'data.js');
+    const builtData = JSON.parse(fs.readFileSync(dataPath, 'utf8').slice('window.NOTION_GAME_DATA = '.length, -2));
+    assert.deepEqual(builtData.games[0].artwork, artwork[1]);
+    await markSiteDeployed({ storage, siteRoot, deploymentHash: first.deploymentHash, sourcePrefix: first.sourcePrefix,
+        sourceContentHash: first.sourceContentHash, snapshotCompletedAt: first.snapshotCompletedAt });
+    const unchanged = await prepareSiteDeployment({ storage, siteRoot, loadArtwork });
+    assert.equal(unchanged.changed, false);
+    artwork[1].hero = artwork[1].hero.replace('/hash/', '/new-hash/');
+    const changed = await prepareSiteDeployment({ storage, siteRoot, loadArtwork });
+    assert.equal(changed.changed, true);
+    assert.notEqual(changed.deploymentHash, first.deploymentHash);
+
+    const previousBuild = fs.readFileSync(dataPath, 'utf8');
+    await assert.rejects(prepareSiteDeployment({ storage, siteRoot, loadArtwork: async () => {
+        throw new Error('Steam artwork unavailable');
+    } }), /Steam artwork unavailable/);
+    assert.equal(fs.readFileSync(dataPath, 'utf8'), previousBuild);
+});

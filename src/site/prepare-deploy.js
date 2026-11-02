@@ -9,6 +9,7 @@ async function main() {
     const { appendGithubOutputs } = require('./github-output');
     const { prepareSiteDeployment } = require('./deployment');
     const { loadAchievementData } = require('../achievements/service');
+    const { fetchGameArtwork } = require('../steam-artwork');
 
     if (!process.env.STEAM_KEY || !process.env.STEAM_ID) {
         throw new Error('站点成就采集缺少 STEAM_KEY 或 STEAM_ID');
@@ -20,6 +21,7 @@ async function main() {
         const result = await prepareSiteDeployment({
             storage,
             force: process.env.SITE_FORCE_DEPLOY === 'true',
+            loadArtwork: (games) => fetchGameArtwork(games.map((game) => game.appid)),
             loadAchievements: async (games) => {
                 const result = await loadAchievementData({
                     storage, games,
