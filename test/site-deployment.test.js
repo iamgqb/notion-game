@@ -242,12 +242,13 @@ test('成就业务数据变化会触发部署，内容相同的成就快照保�
     assert.notEqual(changed.deploymentHash, first.deploymentHash);
 });
 
-test('最新 library_hero 进入站点数据，图片变化独立触发部署，采集失败保留原构建', async (t) => {
+test('横竖封面进入站点数据，竖版图片变化独立触发部署，采集失败保留原构建', async (t) => {
     const storage = new MemoryStorage();
     await seedLatestSnapshot(storage);
     const siteRoot = temporarySite(t);
     const artwork = { 1: {
         hero: 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1/hash/library_hero.jpg?t=1',
+        portrait: 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1/capsule-hash/library_capsule.jpg?t=1',
         header: 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1/hash/header.jpg?t=1',
     } };
     const loadArtwork = async (sourceGames) => { assert.deepEqual(sourceGames, games); return artwork; };
@@ -259,7 +260,7 @@ test('最新 library_hero 进入站点数据，图片变化独立触发部署，
         sourceContentHash: first.sourceContentHash, snapshotCompletedAt: first.snapshotCompletedAt });
     const unchanged = await prepareSiteDeployment({ storage, siteRoot, loadArtwork });
     assert.equal(unchanged.changed, false);
-    artwork[1].hero = artwork[1].hero.replace('/hash/', '/new-hash/');
+    artwork[1].portrait = artwork[1].portrait.replace('/capsule-hash/', '/new-capsule-hash/');
     const changed = await prepareSiteDeployment({ storage, siteRoot, loadArtwork });
     assert.equal(changed.changed, true);
     assert.notEqual(changed.deploymentHash, first.deploymentHash);

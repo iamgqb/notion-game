@@ -211,7 +211,7 @@ npm run site:serve
 
 首页珍藏从有已解锁成就明细的喜欢游戏中随机选择一款，并关联该游戏的真实成就；喜欢区抽取六款，全成就区抽取六款，历史回忆抽取三款。稀有勋章从已解锁且全球解锁比例不高于 5% 的成就中抽取三枚，每款游戏最多一枚。候选不足时显示实际数量或空状态，不补样例数据。使用标签页的 `sessionStorage` 记住上一批结果，在候选足够且存储可用时保证相邻刷新更换选品。
 
-历史记录表示同步发现的游玩时长增量，并非精确会话。游戏档案与成就明细的更新时间分别展示在页脚。游戏封面与首页主视觉统一使用 Steam 的 `library_hero`。构建与同步时通过 Steam 官方 `IStoreBrowseService/GetItems/v1` 接口批量请求 `include_assets`，将返回的 `library_hero` 文件路径代入 `asset_url_format`，保留哈希目录、本地化文件名和版本参数，再从 `shared.fastly.steamstatic.com/store_item_assets/` 加载，避免依赖旧的固定 CDN 路径。网站图片失败时降级为同一接口返回的商店横幅，再显示占位；商店接口请求失败时保留 Notion 已有封面，并拒绝发布缺失图片元数据的新站点。未公开或已下架游戏可能没有资源元数据，会尝试常规 `library_hero` 地址。资源类型说明见 [Steamworks Library Assets](https://partner.steamgames.com/doc/store/assets/libraryassets)。Lucide 图标许可证位于 `site/assets/lucide-LICENSE`。
+历史记录表示同步发现的游玩时长增量，并非精确会话。游戏档案与成就明细的更新时间分别展示在页脚。图片按容器方向选择：Notion 的 `cover` 和网站首页主视觉使用 `library_hero`；游戏收藏、心头好、全成就列表、成就游戏选择器和详情弹窗的竖版封面使用 `library_capsule`；最近游玩与冒险足迹的横向缩略图使用商店 `header` 横幅。构建与同步时通过 Steam 官方 `IStoreBrowseService/GetItems/v1` 接口批量请求 `include_assets`，将对应资源的文件路径代入 `asset_url_format`，保留哈希目录、本地化文件名和版本参数，再从 `shared.fastly.steamstatic.com/store_item_assets/` 加载，避免依赖旧的固定 CDN 路径。竖版图片失败时只尝试其他竖版地址，最终显示名称占位；横版主视觉失败时可回退商店横幅。商店接口请求失败时保留 Notion 已有封面，并拒绝发布缺失图片元数据的新站点。未公开或已下架游戏可能没有资源元数据，会尝试与图片容器方向一致的常规地址。资源类型说明见 [Steamworks Library Assets](https://partner.steamgames.com/doc/store/assets/libraryassets)。Lucide 图标许可证位于 `site/assets/lucide-LICENSE`。
 
 ### 自动部署流程
 

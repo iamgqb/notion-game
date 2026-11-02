@@ -16,6 +16,7 @@
   const state = { view: 'archive', filter: 'all', query: '', sort: 'personal', pageSize: 24, achievementGame: 'all', achievementFilter: 'all', achievementSort: 'rarity', achievementLimit: 24, journeyMonth: 'all', journeyLimit: 20 };
   let library, achievementData, games, gameMap, achievementGames, achievements, history;
   const { sample, selectArchive } = window.CheckpointSelection;
+  const { imageSources } = window.CheckpointArtwork;
   function renderFeaturedGame(hero) {
     const featured = $('.feature');
     featured.hidden = !hero;
@@ -31,10 +32,10 @@
     $('#hero-open').dataset.openGame = hero.appid;
     const image = $('#hero-image');
     image.dataset.gameAppid = hero.appid;
-    delete image.dataset.fallback;
+    image.dataset.gameArtwork = 'hero';
     image.classList.remove('is-missing');
     image.alt = `${hero.name}游戏主视觉`;
-    image.src = cover(hero.appid);
+    image.src = cover(hero.appid, 'hero');
     $('#hero-art-caption').textContent = hero.name;
     const medal = sample(unlocked, 1, [], a => a.id)[0];
     const medalButton = $('#hero-medal');
@@ -51,7 +52,7 @@
   }
 
   function icons() { window.lucide?.createIcons({ attrs: { 'aria-hidden': 'true' } }); }
-  function cover(appid) { return gameMap.get(Number(appid))?.artwork?.hero || `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${Number(appid)}/library_hero.jpg`; }
+  function cover(appid, kind = 'portrait') { return imageSources(appid, gameMap.get(Number(appid))?.artwork, kind)[0]; }
   function achievementIcon(a) { return (a.unlocked ? a.icon : a.iconGray) || a.icon || 'assets/achievement-placeholder.svg'; }
   function gameName(appid) { return gameMap.get(Number(appid))?.name ?? history.find(h => h.appid === Number(appid))?.name ?? '未归档游戏'; }
   function artwork(a, className = '') { return `<img class="${className}" data-achievement-icon="true" src="${esc(achievementIcon(a))}" alt="${esc(a.name)}成就图标" loading="lazy">`; }
@@ -84,7 +85,7 @@
     const rarePicks = selection.rare;
     $('#rare-list').innerHTML = rarePicks.map(a => `<button type="button" class="rare-item" data-achievement="${esc(a.key)}">${artwork(a)}<span class="rare-item-copy"><strong>${esc(a.name)}</strong><small>${esc(gameName(a.appid))}</small></span><span class="rarity"><span>${icon('gem')}${percent(a.globalPercent)}</span><small>全球玩家解锁</small></span></button>`).join('') || empty('还没有收藏到稀有勋章', '全球解锁比例不高于 5% 的已解锁成就会出现在这里。', 'gem');
     const recent = selection.memories;
-    $('#recent-list').innerHTML = recent.map(g => `<button type="button" class="recent-item" data-open-game="${g.appid}"><img data-game-appid="${g.appid}" src="${esc(cover(g.appid))}" alt="${esc(g.name)}封面" loading="lazy"><span><strong>${esc(g.name)}</strong><small>${shortDate(g.lastPlayed)} · 记录增量</small></span><span class="recent-duration">+ ${duration(g.lastSessionMinutes)}<small>累计 ${duration(g.playTimeMinutes)}</small></span></button>`).join('') || empty('冒险还没有留下足迹', '有游玩记录后，就能从这里翻看回忆。', 'footprints');
+    $('#recent-list').innerHTML = recent.map(g => `<button type="button" class="recent-item" data-open-game="${g.appid}"><img data-game-appid="${g.appid}" data-game-artwork="header" src="${esc(cover(g.appid, 'header'))}" alt="${esc(g.name)}封面" loading="lazy"><span><strong>${esc(g.name)}</strong><small>${shortDate(g.lastPlayed)} · 记录增量</small></span><span class="recent-duration">+ ${duration(g.lastSessionMinutes)}<small>累计 ${duration(g.playTimeMinutes)}</small></span></button>`).join('') || empty('冒险还没有留下足迹', '有游玩记录后，就能从这里翻看回忆。', 'footprints');
     $('#completion-grid').innerHTML = selection.completed.map(g => {
       const ag = achievementGames.get(g.appid);
       const progress = ag ? `${ag.achievements.filter(a => a.unlocked).length} / ${ag.achievements.length} 成就` : '100% 成就完成';
@@ -207,7 +208,7 @@
     const visible = records.slice(0, state.journeyLimit);
     const groups = new Map();
     for (const record of visible) { const key = dayKey(record.date); const list = groups.get(key) ?? []; list.push(record); groups.set(key, list); }
-    $('#journey-list').innerHTML = [...groups].map(([date, rows]) => `<section class="journey-day"><time class="journey-date" datetime="${date}"><b>${date.slice(8)}</b><span>${date.slice(0, 7).replace('-', ' / ')}</span></time><div class="journey-day-records">${rows.map(record => `<button type="button" class="journey-row" data-open-game="${record.appid}"><img data-game-appid="${record.appid}" src="${esc(cover(record.appid))}" alt="${esc(record.name)}封面" loading="lazy"><span><strong>${esc(record.name)}</strong><small>记录到新的游玩增量</small></span><span class="journey-minutes">+ ${duration(record.minutes)}<small>游戏时间</small></span></button>`).join('')}</div></section>`).join('') || empty('这一页还没有留下足迹', '换一个月份，看看你走过的世界。', 'footprints');
+    $('#journey-list').innerHTML = [...groups].map(([date, rows]) => `<section class="journey-day"><time class="journey-date" datetime="${date}"><b>${date.slice(8)}</b><span>${date.slice(0, 7).replace('-', ' / ')}</span></time><div class="journey-day-records">${rows.map(record => `<button type="button" class="journey-row" data-open-game="${record.appid}"><img data-game-appid="${record.appid}" data-game-artwork="header" src="${esc(cover(record.appid, 'header'))}" alt="${esc(record.name)}封面" loading="lazy"><span><strong>${esc(record.name)}</strong><small>记录到新的游玩增量</small></span><span class="journey-minutes">+ ${duration(record.minutes)}<small>游戏时间</small></span></button>`).join('')}</div></section>`).join('') || empty('这一页还没有留下足迹', '换一个月份，看看你走过的世界。', 'footprints');
     $('#journey-more').hidden = visible.length >= records.length;
     renderActivity();
     icons();
@@ -320,11 +321,14 @@
         img.src = 'assets/achievement-placeholder.svg';
         return;
       }
-      if (img.dataset.gameAppid && !img.dataset.fallback) {
-        img.dataset.fallback = 'true';
+      if (img.dataset.gameAppid) {
         const appid = Number(img.dataset.gameAppid);
-        img.src = gameMap.get(appid)?.artwork?.header || `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`;
-        return;
+        const sources = imageSources(appid, gameMap.get(appid)?.artwork, img.dataset.gameArtwork);
+        const index = sources.indexOf(img.src);
+        if (index >= 0 && index + 1 < sources.length) {
+          img.src = sources[index + 1];
+          return;
+        }
       }
       img.classList.add('is-missing');
     }, true);

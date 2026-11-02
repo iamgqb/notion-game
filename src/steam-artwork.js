@@ -61,6 +61,7 @@ async function fetchGameArtwork(appids, {
             if (item.success !== 1 || !batch.includes(item.appid) || !item.assets) continue;
             artwork[item.appid] = {
                 hero: assetUrl(item.assets, item.assets.library_hero || item.assets.library_hero_2x),
+                portrait: assetUrl(item.assets, item.assets.library_capsule || item.assets.library_capsule_2x),
                 header: assetUrl(item.assets, item.assets.header),
             };
         }

@@ -18,11 +18,13 @@ test('Steam 资源解析兼容带哈希目录与旧文件名，保留本地化�
             { appid: 570, success: 1, assets: {
                 asset_url_format: 'steam/apps/570/${FILENAME}?t=1791407503',
                 library_hero: '0e4a18e7b53d1d4d68bba65969919e6a85920b04/library_hero.jpg',
+                library_capsule: '6cddc26cb124bd87d3fbacd58cd83ba33e4cb0e7/library_capsule_schinese.jpg',
                 header: 'localized/header_schinese.jpg',
             } },
             { appid: 2358720, success: 1, assets: {
                 asset_url_format: 'steam/apps/2358720/${FILENAME}?t=1760601605',
                 library_hero: 'library_hero.jpg',
+                library_capsule: 'library_600x900_schinese.jpg',
                 header: 'header_schinese.jpg',
             } },
         ]);
@@ -30,7 +32,9 @@ test('Steam 资源解析兼容带哈希目录与旧文件名，保留本地化�
 
     assert.equal(artwork[570].hero, 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/570/0e4a18e7b53d1d4d68bba65969919e6a85920b04/library_hero.jpg?t=1791407503');
     assert.match(artwork[570].header, /localized\/header_schinese\.jpg\?t=1791407503$/);
+    assert.equal(artwork[570].portrait, 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/570/6cddc26cb124bd87d3fbacd58cd83ba33e4cb0e7/library_capsule_schinese.jpg?t=1791407503');
     assert.equal(artwork[2358720].hero, 'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2358720/library_hero.jpg?t=1760601605');
+    assert.match(artwork[2358720].portrait, /library_600x900_schinese\.jpg\?t=1760601605$/);
 });
 
 test('游戏库分批获取资源，忽略重复和无效 App ID', async () => {
@@ -53,6 +57,7 @@ test('忽略下架和未请求条目，缺少 hero 时允许使用横幅或 2x �
         } },
         { appid: 3, success: 1, assets: {
             asset_url_format: 'steam/apps/3/${FILENAME}', library_hero_2x: 'hash/library_hero_2x.jpg',
+            library_capsule_2x: 'portrait-hash/library_capsule_2x.jpg',
         } },
         { appid: 4, success: 1, assets: {} },
     ]) });
@@ -61,6 +66,8 @@ test('忽略下架和未请求条目，缺少 hero 时允许使用横幅或 2x �
     assert.equal(result[2].hero, null);
     assert.match(result[2].header, /hash\/header\.jpg$/);
     assert.match(result[3].hero, /hash\/library_hero_2x\.jpg$/);
+    assert.equal(result[2].portrait, null);
+    assert.match(result[3].portrait, /portrait-hash\/library_capsule_2x\.jpg$/);
 });
 
 test('临时网络故障和限流会有限重试', async () => {
