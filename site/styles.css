@@ -1647,7 +1647,8 @@ p {
   display:grid;
   grid-template-columns:35px repeat(14,1fr);
   gap:6px;
-  min-width:650px
+  min-width:650px;
+  padding:4px
 }
 
 .activity-weekday {

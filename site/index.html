@@ -9,10 +9,12 @@
   <title>存档点 CHECKPOINT — 我的游戏档案</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23c84930'/%3E%3Cpath d='M12 29V11h16l-4 6 4 6H14' stroke='white' stroke-width='2.5' fill='none'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./recently-playing.css">
   <script src="./assets/lucide.min.js" defer></script>
   <script src="./data.js" defer></script>
   <script src="./showcase.js" defer></script>
   <script src="./game-artwork.js" defer></script>
+  <script src="./recently-playing.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -38,9 +40,18 @@
 
     <section id="archive-view" class="page" data-screen-label="玩家档案" hidden>
       <div class="page-intro">
-        <div><p class="eyebrow"><span class="tiny-cross">+</span> A LIFE WELL PLAYED</p><h1>玩过的世界，<span>都是我的收藏。</span></h1><p class="intro-copy">留给热爱的时间，和一路收集的成就。</p></div>
+        <div><p class="eyebrow"><span class="tiny-cross">+</span> A LIFE WELL PLAYED</p><h1>玩过的世界，<span>都是我的收藏</span></h1><p class="intro-copy">留给热爱的时间，和一路收集的成就。</p></div>
         <a class="archive-stamp" href="#journey" aria-label="查看游戏足迹"><i data-lucide="gamepad-2" aria-hidden="true"></i><span>私人游戏档案<br><b>EST. <span id="start-year">2014</span></b></span></a>
       </div>
+
+      <section class="playing-section" id="currently-playing" aria-labelledby="playing-title" hidden>
+        <div class="playing-hero">
+          <img class="playing-image" id="playing-image" data-game-artwork="hero" alt="最近在玩的游戏主视觉" fetchpriority="high">
+          <div class="playing-topline"><span class="playing-tag"><i data-lucide="bookmark" aria-hidden="true"></i>最近在玩</span><span class="playing-window" id="playing-window"></span></div>
+          <div class="playing-copy"><p class="playing-kicker">THE CURRENT CHAPTER</p><h2 class="playing-title" id="playing-title"></h2><div class="playing-bottom"><p class="playing-time">近 7 天游玩<strong id="playing-duration"></strong></p><button class="playing-open" id="playing-open" type="button">查看游戏档案<i data-lucide="arrow-up-right" aria-hidden="true"></i></button></div></div>
+        </div>
+        <div class="playing-meta"><span class="playing-last"><i data-lucide="history" aria-hidden="true"></i><span id="playing-last-record"></span></span><span>这周，时间留给了它。</span></div>
+      </section>
 
       <section class="feature" aria-labelledby="feature-title">
         <div class="feature-copy">
@@ -60,7 +71,7 @@
       <section class="stat-strip" aria-label="游戏档案统计" id="archive-stats"></section>
 
       <section class="section-block" aria-labelledby="favorites-title">
-        <div class="section-heading"><div><p class="eyebrow">THE PERSONAL PICKS</p><h2 id="favorites-title">总有一些，<span>想再玩一次。</span><sup>我的心头好</sup></h2></div><a href="#collection?filter=favorite" class="text-link">全部喜欢 <span id="favorite-total">14</span> <i data-lucide="arrow-right" aria-hidden="true"></i></a></div>
+        <div class="section-heading"><div><p class="eyebrow">THE PERSONAL PICKS</p><h2 id="favorites-title">总有一些，<span>值得回味</span><sup>我的心头好</sup></h2></div><a href="#collection?filter=favorite" class="text-link">全部喜欢 <span id="favorite-total">14</span> <i data-lucide="arrow-right" aria-hidden="true"></i></a></div>
         <div class="favorites-shelf" id="favorites-shelf"></div>
       </section>
 
@@ -71,20 +82,20 @@
           <p class="section-footnote"><i data-lucide="sparkles" aria-hidden="true"></i> 随机翻出三枚稀有成就 · 全球解锁比例 ≤ 5%。</p>
         </section>
         <section class="section-block recent-highlight" aria-labelledby="recent-title">
-          <div class="section-heading"><div><p class="eyebrow">MOMENTS FROM THE ARCHIVE</p><h2 id="recent-title">回忆翻到，这一页。</h2></div><a href="#journey" class="icon-link" aria-label="查看完整游玩足迹"><i data-lucide="arrow-up-right" aria-hidden="true"></i></a></div>
+          <div class="section-heading"><div><p class="eyebrow">MOMENTS FROM THE ARCHIVE</p><h2 id="recent-title">回忆翻到，这一页</h2></div><a href="#journey" class="icon-link" aria-label="查看完整游玩足迹"><i data-lucide="arrow-up-right" aria-hidden="true"></i></a></div>
           <div class="recent-list" id="recent-list"></div>
           <p class="section-footnote"><i data-lucide="history" aria-hidden="true"></i> 随机回顾档案中的游玩记录。</p>
         </section>
       </div>
 
       <section class="completion-shelf section-block" aria-labelledby="completed-title">
-        <div class="section-heading"><div><p class="eyebrow">EVERY LAST ACHIEVEMENT</p><h2 id="completed-title">每一枚，都没有落下。</h2></div><a href="#collection?filter=perfected" class="text-link">全成就收藏 <i data-lucide="arrow-right" aria-hidden="true"></i></a></div>
+        <div class="section-heading"><div><p class="eyebrow">EVERY LAST ACHIEVEMENT</p><h2 id="completed-title">每一枚，都没有落下</h2></div><a href="#collection?filter=perfected" class="text-link">全成就收藏 <i data-lucide="arrow-right" aria-hidden="true"></i></a></div>
         <div id="completion-grid" class="completion-grid"></div>
       </section>
     </section>
 
     <section id="collection-view" class="page inner-page" data-screen-label="游戏收藏" hidden>
-      <div class="inner-intro"><p class="eyebrow">THE COLLECTION</p><h1>我的游戏收藏<span class="title-dot">.</span></h1><p>每一张封面后面，都是一个值得打开的世界。</p></div>
+      <div class="inner-intro"><p class="eyebrow">THE COLLECTION</p><h1>我的游戏收藏</h1><p>每一张封面后面，都是一个值得打开的世界。</p></div>
       <div class="collection-toolbar"><div id="collection-filters" class="filter-tabs" aria-label="收藏筛选"><button type="button" data-filter="all" aria-pressed="true">全部收藏 <span></span></button><button type="button" data-filter="favorite" aria-pressed="false">心头好 <span></span></button><button type="button" data-filter="perfected" aria-pressed="false">全成就 <span></span></button><button type="button" data-filter="unplayed" aria-pressed="false">等待开封 <span></span></button></div><div class="collection-controls"><label class="search-box"><i data-lucide="search" aria-hidden="true"></i><input type="search" id="collection-search" placeholder="搜索你的收藏" aria-label="搜索游戏名称"><kbd>/</kbd></label><label class="sort-box"><span class="sr-only">收藏排序</span><select id="collection-sort"><option value="personal">收藏优先</option><option value="hours">游玩时长</option><option value="recent">最近记录</option><option value="achievement">成就进度</option><option value="name">游戏名称</option></select><i data-lucide="chevrons-up-down" aria-hidden="true"></i></label></div></div>
       <div class="result-line"><p id="collection-result" aria-live="polite"></p><span class="mono">YOUR NEXT WORLD IS HERE</span></div>
       <div class="library-grid" id="library-grid"></div>
@@ -92,7 +103,7 @@
     </section>
 
     <section id="achievements-view" class="page inner-page" data-screen-label="成就陈列柜" hidden>
-      <div class="inner-intro"><p class="eyebrow">THE TROPHY CABINET</p><h1>把高光，摆进陈列柜<span class="title-dot">.</span></h1><p>那些不止于通关的执着，都有一枚小小的证明。</p></div>
+      <div class="inner-intro"><p class="eyebrow">THE TROPHY CABINET</p><h1>把高光，摆进陈列柜</h1><p>那些不止于通关的执着，都有一枚小小的证明。</p></div>
       <div class="achievement-overview" id="achievement-overview"></div>
       <div class="game-selectors" id="achievement-games" aria-label="选择成就游戏"></div>
       <div class="achievement-toolbar"><div class="filter-tabs" id="achievement-filters" aria-label="成就筛选"><button type="button" data-achievement-filter="all" aria-pressed="true">全部成就</button><button type="button" data-achievement-filter="unlocked" aria-pressed="false">已解锁</button><button type="button" data-achievement-filter="rare" aria-pressed="false">稀有成就 <span>≤ 5%</span></button><button type="button" data-achievement-filter="locked" aria-pressed="false">未解锁</button></div><label class="sort-box"><span class="sr-only">成就排序</span><select id="achievement-sort"><option value="rarity">稀有程度</option><option value="recent">最近解锁</option><option value="game">游戏 / 成就名称</option></select><i data-lucide="chevrons-up-down" aria-hidden="true"></i></label></div>
@@ -102,7 +113,7 @@
     </section>
 
     <section id="journey-view" class="page inner-page" data-screen-label="冒险足迹" hidden>
-      <div class="inner-intro"><p class="eyebrow">THE TIME WELL SPENT</p><h1>时间会记得，我去过哪里<span class="title-dot">.</span></h1><p>沿着记录，重温那些还不想退出游戏的日子。</p></div>
+      <div class="inner-intro"><p class="eyebrow">THE TIME WELL SPENT</p><h1>时间会记得，我去过哪里</h1><p>沿着记录，重温那些还不想退出游戏的日子。</p></div>
       <div class="journey-overview" id="journey-overview"></div>
       <section class="activity-panel" aria-labelledby="activity-title"><div class="activity-heading"><div><h2 id="activity-title">留在日历里的冒险</h2><p>每一格，是当天记录到的游玩时长。</p></div><label class="sort-box"><span class="sr-only">查看月份</span><select id="journey-month"></select><i data-lucide="chevrons-up-down" aria-hidden="true"></i></label></div><div class="activity-scroll"><div id="activity-grid" class="activity-grid"></div></div><div class="activity-legend"><span>少</span><i></i><i></i><i></i><i></i><i></i><span>多</span></div></section>
       <div class="section-heading journey-heading"><div><p class="eyebrow">ONE SAVE AT A TIME</p><h2>游玩记录</h2></div><span class="section-note">记录同步发现的时长增量，非单次会话</span></div>

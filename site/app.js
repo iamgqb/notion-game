@@ -81,6 +81,7 @@
     const dates = games.map(g => g.buyTime).filter(Boolean).sort();
     $('#start-year').textContent = dates[0]?.slice(0, 4) ?? '2014';
     renderFeaturedGame(selection.hero);
+    window.CheckpointRecent.render({ games, history, imageSources });
     $('#favorites-shelf').innerHTML = selection.picks.map(gameCard).join('') || empty('心头好，留给真正喜欢的作品', '在游戏库标记喜欢后，它们会出现在这里。', 'heart');
     const rarePicks = selection.rare;
     $('#rare-list').innerHTML = rarePicks.map(a => `<button type="button" class="rare-item" data-achievement="${esc(a.key)}">${artwork(a)}<span class="rare-item-copy"><strong>${esc(a.name)}</strong><small>${esc(gameName(a.appid))}</small></span><span class="rarity"><span>${icon('gem')}${percent(a.globalPercent)}</span><small>全球玩家解锁</small></span></button>`).join('') || empty('还没有收藏到稀有勋章', '全球解锁比例不高于 5% 的已解锁成就会出现在这里。', 'gem');
